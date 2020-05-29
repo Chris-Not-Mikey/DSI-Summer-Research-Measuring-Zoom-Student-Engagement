@@ -12,7 +12,7 @@ predictor = dlib.shape_predictor("../data/shape_predictor_68_face_landmarks.dat"
 
 
 
-image = cv2.imread("../data/photos/test_gaze_1.jpg")
+image = cv2.imread("../data/Columbia_Gaze_Data_Set/0001/0001_2m_15P_10V_0H.jpg")
 image = imutils.resize(image, width=500)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 # detect faces in the grayscale image
@@ -64,9 +64,8 @@ for (i, rect) in enumerate(rects):
 			circle_center = (math.floor(x + w/2),y+2)
 			axes_length = (math.floor(w/2), math.floor(h/2))
 			color = (255, 255, 255)
-			#cv2.circle(mask, circle_center, radius, (255, 255, 255), -1, 8, 0)
-			cv2.ellipse(mask, circle_center, axes_length, 0, 0, 360, color, 5 )
-
+			thickness = 10 # If this value is too small, there will be small artifacts in the eye which is unacceptable
+			cv2.ellipse(mask, circle_center, axes_length, 0, 0, 360, color, thickness )
 
 			clone_masked = image & mask
 
@@ -94,17 +93,15 @@ for (i, rect) in enumerate(rects):
 
 		if (name == "nose"):
 			(x, y, w, h) = cv2.boundingRect(np.array([shape[i:j]]))
-			nose_width = x
+			nose_width = w
 		
-			
-
 		else:
 			continue
 	# visualize all facial landmarks with a transparent overlay
 
 
 	# concatenate ROI
-	nose_width = 100
+
 	eye_right_shape = eye_right.shape
 	eye_left_shape = eye_left.shape
 
