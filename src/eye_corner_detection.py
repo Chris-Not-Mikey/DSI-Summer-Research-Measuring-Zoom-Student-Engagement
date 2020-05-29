@@ -61,15 +61,18 @@ for (i, rect) in enumerate(rects):
 			print(y)
 			print(w)
 			print(h)
-			circle_center = (math.floor(x + w/2),y)
-			cv2.circle(mask, circle_center, radius, (255, 255, 255), -1, 8, 0)
+			circle_center = (math.floor(x + w/2),y+2)
+			axes_length = (math.floor(w/2), math.floor(h/2))
+			color = (255, 255, 255)
+			#cv2.circle(mask, circle_center, radius, (255, 255, 255), -1, 8, 0)
+			cv2.ellipse(mask, circle_center, axes_length, 0, 0, 360, color, 5 )
 
 
 			clone_masked = image & mask
 
 			# crop the mask
-			clone_masked = clone_masked[circle_center[1] - radius:circle_center[1] + radius,
-                            circle_center[0] - radius:circle_center[0] + radius, :]
+			clone_masked = clone_masked[circle_center[1] - 2*axes_length[1]:circle_center[1] + 2*axes_length[1],
+                           circle_center[0] - 2*axes_length[0]:circle_center[0] + 2*axes_length[0], :]
 
 			roi = imutils.resize(roi, width=250, height=250, inter=cv2.INTER_CUBIC)
 			# show the particular face part
@@ -81,10 +84,10 @@ for (i, rect) in enumerate(rects):
 
 			if (name == "left_eye"):
 				print("we get here left")
-				eye_left = roi
+				eye_left = clone_masked
 			else:
 				print("we get here right")
-				eye_right = roi
+				eye_right = clone_masked
 		
 			cv2.waitKey(0)
 
