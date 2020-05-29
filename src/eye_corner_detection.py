@@ -12,7 +12,7 @@ predictor = dlib.shape_predictor("../data/shape_predictor_68_face_landmarks.dat"
 
 
 
-image = cv2.imread("../data/Columbia_Gaze_Data_Set/0001/0001_2m_15P_10V_0H.jpg")
+image = cv2.imread("../data/photos/test_gaze_1.jpg")
 image = imutils.resize(image, width=500)
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 # detect faces in the grayscale image
@@ -52,9 +52,30 @@ for (i, rect) in enumerate(rects):
 
 			# extract the ROI of the face region as a separate image
 			(x, y, w, h) = cv2.boundingRect(np.array([shape[i:j]]))
-			roi = image[y - h:math.ceil(y + 1.5*h), x:x + w]
+			#roi = image[y - h:math.ceil(y + 1.5*h), x:x + w]
+			roi = image[y:y + h, x:x + w]
+
+			mask = np.zeros(image.shape, dtype=np.uint8)
+			radius = h
+			print(x)
+			print(y)
+			print(w)
+			print(h)
+			circle_center = (math.floor(x + w/2),y)
+			cv2.circle(mask, circle_center, radius, (255, 255, 255), -1, 8, 0)
+
+
+			clone_masked = image & mask
+
+			# crop the mask
+			clone_masked = clone_masked[circle_center[1] - radius:circle_center[1] + radius,
+                            circle_center[0] - radius:circle_center[0] + radius, :]
+
 			roi = imutils.resize(roi, width=250, height=250, inter=cv2.INTER_CUBIC)
 			# show the particular face part
+
+			
+			cv2.imshow("Mask", clone_masked)
 			cv2.imshow("ROI", roi)
 			cv2.imshow("Image", clone)
 
@@ -96,8 +117,8 @@ for (i, rect) in enumerate(rects):
 	#vis = np.concatenate((eye_left, eye_right), axis=1)
 	#cv2.imwrite('out.png', vis)
 	#cv2.imshow("merge", vis)
-	output = face_utils.visualize_facial_landmarks(image, shape)
-	cv2.imshow("Image", output)
+	#output = face_utils.visualize_facial_landmarks(image, shape)
+	#cv2.imshow("Image", output)
 	cv2.waitKey(0)
 
 
