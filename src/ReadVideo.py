@@ -29,9 +29,14 @@ while(cap.isOpened()):
     if ret == True:
 
         # Display the resulting frame
+        # Vanilla
         # cv2.imshow('Frame',frame)
 
-        feat.detectAndDisplay()
+        # With haar features (face and eyes)
+        # feat.detectAndDisplay()
+
+        # just pupil detection
+
 
         # Press Q on keyboard to  exit
         if cv2.waitKey(25) & 0xFF == ord('q'):
