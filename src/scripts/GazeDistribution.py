@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
+from scipy.signal import argrelextrema
 import seaborn as sns
 import csv
 import glob
@@ -18,48 +19,69 @@ gaze_angle_y = []
 confidence_threshold = 0.98
 
 indices = {
+    "timestamp": 0,
     "confidence": 0,
     "gaze_angle_x": 0,
     "gaze_angle_y": 0,
+    "x_36": 0,
     "x_37": 0,
     "x_38": 0,
+    "x_39": 0,
     "x_40": 0,
     "x_41": 0,
+    "y_36": 0,
     "y_37": 0,
+    "y_38": 0,
     "y_38": 0,
     "y_40": 0,
     "y_41": 0,
+    "x_42": 0,
     "x_43": 0,
     "x_44": 0,
+    "x_45": 0,
     "x_46": 0,
     "x_47": 0,
     "y_43": 0,
+    "y_43": 0,
     "y_44": 0,
+    "y_45": 0,
     "y_46": 0,
     "y_47": 0,
 }
 
 
 eye_features_2D = {
+    "timestamp": 0,
+    "x_36": 0,
     "x_37": 0,
     "x_38": 0,
+    "x_39": 0,
     "x_40": 0,
     "x_41": 0,
+    "y_36": 0,
     "y_37": 0,
+    "y_38": 0,
     "y_38": 0,
     "y_40": 0,
     "y_41": 0,
+    "x_42": 0,
     "x_43": 0,
     "x_44": 0,
+    "x_45": 0,
     "x_46": 0,
     "x_47": 0,
     "y_43": 0,
+    "y_43": 0,
     "y_44": 0,
+    "y_45": 0,
     "y_46": 0,
     "y_47": 0,
 }
 
 eye_features_2D_list = []
+
+ear_independent_time = []
+ear_left_list = []
 
 def read_csv_file(filename):
     with open(filename, newline='') as f:
@@ -115,100 +137,55 @@ def read_csv_file(filename):
 
 def check_eye_features(row_element, data, eye_features_2D_element):
 
-    eye_features = ["x_37", "x_38", "x_40", "x_41", "y_37", "y_38", "y_40", "y_41", "x_43",
-    "x_44", "x_46", "x_47", "y_43", "y_44", "y_46", "y_47"]
+    eye_features = ["timestamp", "x_36", "x_37", "x_38", "x_39", "x_40", "x_41", "y_36", "y_37", "y_38", "y_39", "y_40", "y_41", 
+    "x_42", "x_43", "x_44", "x_45", "x_46", "x_47", "y_42", "y_43", "y_44", "y_45", "y_46", "y_47"]
     
 
     for i in eye_features:
         if row_element == indices[i]:
-            #print("we are here")
-            #print(i)
-            #print(data)
             eye_features_2D_element[i] = data
-            #print(eye_features_2D[i])
             break
-
     
 
 def check_indeces(name, column_index):
+    index_names = ["timestamp", "confidence", "gaze_angle_x", "gaze_angle_y", "x_36", "x_37", "x_38", "x_39", "x_40", "x_41",
+     "y_36", "y_37", "y_38", "y_39", "y_40", "y_41", "x_42", "x_43", "x_44", "x_45", "x_46",
+      "x_47", "y_42", "y_43", "y_44", "y_45", "y_46", "y_47"]
 
-    if name.strip() == "confidence":
-        print("do we get here????")
-        indices["confidence"] = column_index
-        return True
+    for i in index_names:
+        if name.strip() == i:
+            indices[i] = column_index
+            return True
 
-    if name.strip() == "gaze_angle_x":
-        indices["gaze_angle_x"] = column_index
-        return True
 
-    if name.strip() == "gaze_angle_y":
-        indices["gaze_angle_y"] = column_index
-        return True
+def measure_eye_aspect_ratio():
+    for i in eye_features_2D_list:
 
-    if name.strip() == "x_37":
-        indices["x_37"] = column_index
-        return True
+        x_21_1 = (float(i["x_37"]) - float(i["x_41"])) ** 2
+        y_21_1 = (float(i["y_37"]) - float(i["y_41"])) ** 2
+        distance_left_1 = np.sqrt((x_21_1 + y_21_1))
 
-    if name.strip() == "x_38":
-        indices["x_38"] = column_index
-        return True
+        x_21_2 = (float(i["x_38"]) - float(i["x_40"])) ** 2
+        y_21_2 = (float(i["y_38"]) - float(i["y_40"])) ** 2
+        distance_left_2 = np.sqrt((x_21_2 + y_21_2))
 
-    if name.strip() == "x_40":
-        indices["x_40"] = column_index
-        return True
+ 
+        x_21_3 = (float(i["x_36"]) - float(i["x_39"])) ** 2
+        y_21_3 = (float(i["y_36"]) - float(i["y_39"])) ** 2
+        distance_left_3 = np.sqrt((x_21_3 + y_21_3))
 
-    if name.strip() == "x_41":
-        indices["x_41"] = column_index
-        return True
+        ear_left = (distance_left_1 + distance_left_2) / (2 * (distance_left_3))
+        ear_left_list.append(ear_left)
+        ear_independent_time.append(float(i["timestamp"]))
 
-    if name.strip() == "y_37":
-        indices["y_37"] = column_index
-        return True
 
-    if name.strip() == "y_38":
-        indices["y_38"] = column_index
-        return True
+def plot_eyelid_distance(name):
+    path = "../../data/kernel_plots/" + name + "_EAR"
+    plt.scatter(ear_independent_time, ear_left_list)
+    plt.savefig(path)
 
-    if name.strip() == "y_40":
-        indices["y_40"] = column_index
-        return True
-
-    if name.strip() == "y_41":
-        indices["y_41"] = column_index
-        return True
-
-    if name.strip() == "x_43":
-        indices["x_43"] = column_index
-        return True
-
-    if name.strip() == "x_44":
-        indices["x_44"] = column_index
-        return True
-
-    if name.strip() == "x_46":
-        indices["x_46"] = column_index
-        return True
-
-    if name.strip() == "x_47":
-        indices["x_47"] = column_index
-        return True
-
-    if name.strip() == "y_43":
-        indices["y_43"] = column_index
-        return True
-
-    if name.strip() == "y_44":
-        indices["y_44"] = column_index
-        return True
-
-    if name.strip() == "y_46":
-        indices["y_46"] = column_index
-        return True
-
-    if name.strip() == "y_47":
-        indices["y_47"] = column_index
-        return True
-
+    print("Scipy Output:")
+    print(argrelextrema(ear_left_list, np.less, axis=1))
   
 
 def plot_kernels(name):
@@ -231,14 +208,17 @@ for file in glob.glob("../../data/Media/*.mov"):
     files.append(video[0])
 
 # TODO: Remove. This is for speeding up computation while debuggin
-files = ["up_down_test"]
+files = ["blink_test_2"]
 
 for name in files:
     file_name = name
     os.chdir("../../OpenFacePrecompiledBinaries/bin")
     subprocess.call(['./FeatureExtraction', '-f', '../../data/Media/' + file_name + '.mov', '-gaze', '-2Dfp', '-out_dir', '../../data/gaze_outputs'])
     read_csv_file('../../data/gaze_outputs/' + file_name + '.csv')
-    plot_kernels(name)
+    #plot_kernels(name)
+    measure_eye_aspect_ratio()
+    plot_eyelid_distance(name)
 
-print(eye_features_2D_list)
+
+
 print("hello world")
