@@ -7,6 +7,7 @@ import csv
 import glob
 import os
 import subprocess
+import copy
 
 # This script will run Gaze Detection from OpenFace's provided Feature Extraction code
 # From this, it will generate multiavariate kernel density estimate
@@ -38,11 +39,36 @@ indices = {
     "y_47": 0,
 }
 
+
+eye_features_2D = {
+    "x_37": 0,
+    "x_38": 0,
+    "x_40": 0,
+    "x_41": 0,
+    "y_37": 0,
+    "y_38": 0,
+    "y_40": 0,
+    "y_41": 0,
+    "x_43": 0,
+    "x_44": 0,
+    "x_46": 0,
+    "x_47": 0,
+    "y_43": 0,
+    "y_44": 0,
+    "y_46": 0,
+    "y_47": 0,
+}
+
+eye_features_2D_list = []
+
 def read_csv_file(filename):
     with open(filename, newline='') as f:
         reader = csv.reader(f)
         counter = 0
         for row in reader:
+
+            eye_features_2D_element = copy.deepcopy(eye_features_2D)
+
             if counter != 0:
 
                 row_element = 0
@@ -63,6 +89,11 @@ def read_csv_file(filename):
                     if row_element == indices["gaze_angle_y"]:
                         #print(row_element)
                         gaze_angle_y.append(i)
+
+
+                    check_eye_features(row_element, i, eye_features_2D_element)
+                   
+
                     
                     row_element = row_element + 1
 
@@ -73,13 +104,36 @@ def read_csv_file(filename):
                     check_indeces(j, column_index)
                     column_index = column_index + 1
 
+
+            # This looks strange, but the way the data structure works,
+            # The first element in the counter is all 0's
+            if counter >= 1:
+                eye_features_2D_list.append(eye_features_2D_element)
+
             counter = counter + 1
 
+
+def check_eye_features(row_element, data, eye_features_2D_element):
+
+    eye_features = ["x_37", "x_38", "x_40", "x_41", "y_37", "y_38", "y_40", "y_41", "x_43",
+    "x_44", "x_46", "x_47", "y_43", "y_44", "y_46", "y_47"]
+    
+
+    for i in eye_features:
+        if row_element == indices[i]:
+            #print("we are here")
+            #print(i)
+            #print(data)
+            eye_features_2D_element[i] = data
+            #print(eye_features_2D[i])
+            break
+
+    
 
 def check_indeces(name, column_index):
 
     if name.strip() == "confidence":
-        print("dow we get here????")
+        print("do we get here????")
         indices["confidence"] = column_index
         return True
 
@@ -157,8 +211,6 @@ def check_indeces(name, column_index):
 
   
 
-
-
 def plot_kernels(name):
 
     path = "../../data/kernel_plots/" + name 
@@ -179,7 +231,7 @@ for file in glob.glob("../../data/Media/*.mov"):
     files.append(video[0])
 
 # TODO: Remove. This is for speeding up computation while debuggin
-#files = ["up_down_test"]
+files = ["up_down_test"]
 
 for name in files:
     file_name = name
@@ -188,5 +240,5 @@ for name in files:
     read_csv_file('../../data/gaze_outputs/' + file_name + '.csv')
     plot_kernels(name)
 
-
+print(eye_features_2D_list)
 print("hello world")
