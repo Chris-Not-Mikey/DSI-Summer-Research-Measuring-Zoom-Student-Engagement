@@ -32,7 +32,7 @@ indices = {
     "y_36": 0,
     "y_37": 0,
     "y_38": 0,
-    "y_38": 0,
+    "y_39": 0,
     "y_40": 0,
     "y_41": 0,
     "x_42": 0,
@@ -61,7 +61,7 @@ eye_features_2D = {
     "y_36": 0,
     "y_37": 0,
     "y_38": 0,
-    "y_38": 0,
+    "y_39": 0,
     "y_40": 0,
     "y_41": 0,
     "x_42": 0,
@@ -174,19 +174,40 @@ def measure_eye_aspect_ratio():
         y_21_3 = (float(i["y_36"]) - float(i["y_39"])) ** 2
         distance_left_3 = np.sqrt((x_21_3 + y_21_3))
 
-        ear_left = (distance_left_1 + distance_left_2) / (2 * (distance_left_3))
+        ear_left = (distance_left_1 + distance_left_2) / (2.0 * (distance_left_3))
         ear_left_list.append(ear_left)
         ear_independent_time.append(float(i["timestamp"]))
 
 
-def plot_eyelid_distance(name):
+def plot_EAR_vs_time(name):
     path = "../../data/kernel_plots/" + name + "_EAR"
     plt.scatter(ear_independent_time, ear_left_list)
     plt.savefig(path)
 
-    print("Scipy Output:")
-    print(argrelextrema(ear_left_list, np.less, axis=1))
-  
+def calculate_number_blinks():
+
+    number_blinks = 0
+    ear_threshold = 0.2
+
+    # Get local minimums from the EAR data recorded
+    # Function returns the indices of the local mins
+    min_index = argrelextrema(np.array(ear_left_list), np.less, order=20)
+    ear_left_array = np.array(ear_left_list)
+
+    # Use the indices to max a list of minumns
+    minimums = []
+    for i in min_index:
+        minimums.append(ear_left_array[i])
+
+
+    # see if the minimums make the cutoff
+    for j in minimums:
+        for k in j:
+            if k < ear_threshold:
+                number_blinks = number_blinks + 1
+
+    return number_blinks
+
 
 def plot_kernels(name):
 
@@ -208,7 +229,7 @@ for file in glob.glob("../../data/Media/*.mov"):
     files.append(video[0])
 
 # TODO: Remove. This is for speeding up computation while debuggin
-files = ["blink_test_2"]
+files = ["blink_test", "blink_test_2"]
 
 for name in files:
     file_name = name
@@ -217,7 +238,12 @@ for name in files:
     read_csv_file('../../data/gaze_outputs/' + file_name + '.csv')
     #plot_kernels(name)
     measure_eye_aspect_ratio()
-    plot_eyelid_distance(name)
+    plot_EAR_vs_time(name)
+    blinks = calculate_number_blinks()
+    print("There were " + str(blinks) + " blinks recorded in " + name)
+    eye_features_2D_list.clear()
+    ear_independent_time.clear()
+    ear_left_list.clear()  
 
 
 
