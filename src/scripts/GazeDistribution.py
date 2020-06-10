@@ -79,7 +79,6 @@ eye_features_2D = {
 }
 
 eye_features_2D_list = []
-
 ear_independent_time = []
 ear_left_list = []
 
