@@ -4,6 +4,11 @@ import os
 import subprocess
 import csv
 import math
+import cv2
+import imutils
+from imutils import face_utils
+import dlib
+import time
 
 
 class Pupillometer:
@@ -59,8 +64,78 @@ class Pupillometer:
 
     def pupil_locater(self, name):
         os.system("pwd")
+
+        subprocess.call(['python3', 'inferno.py', 'cropped_output.mov'])
+
+
+    def crop_video_to_roi(self, name):
+
         os.chdir("../../PupilLocatorScripts")
-        subprocess.call(['python3', 'inferno.py', '../data/Media/' + name + '.mp4'])
+
+        detector = dlib.get_frontal_face_detector()
+        predictor = dlib.shape_predictor('../data/shape_predictor_68_face_landmarks.dat')
+
+        cap = cv2.VideoCapture('../data/Media/' + name + ".mov")
+
+        #output settings
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter('cropped_output.mov', fourcc, 1, (250,100))
+
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+
+            if ret==True:
+
+                #resize
+                frame = imutils.resize(frame, width=500)
+
+                # convert to grayscale
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                #detect faces
+                rects = detector(gray, 1)
+
+                #for each face detected
+                for (i, rect) in enumerate(rects):
+                    # determine the facial landmarks for the face region, then
+                    # convert the landmark (x, y)-coordinates to a NumPy array
+                    shape = predictor(gray, rect)
+                    shape = face_utils.shape_to_np(shape)
+
+                    # loop over the face parts individually
+                    for (name, (i, j)) in face_utils.FACIAL_LANDMARKS_IDXS.items():
+
+                        if (name == "left_eye"):
+                            # clone the original image so we can draw on it, then
+                            # display the name of the face part on the image
+                            clone = frame.copy()
+                            # loop over the subset of facial landmarks, drawing the
+                            # specific face part
+                            for (x, y) in shape[i:j]:
+                                cv2.circle(clone, (x, y), 1, (0, 0, 255), -1)
+
+                            # extract the ROI of the face region as a separate image
+                            (x, y, w, h) = cv2.boundingRect(np.array([shape[i:j]]))
+                            roi = frame[y:y + h, x:x + w]
+                            roi = imutils.resize(roi, width=250, height=100, inter=cv2.INTER_CUBIC)
+                          
+                            
+                            #write the ROI to the file
+                            # cv2.imshow("frame", clone)
+                            # cv2.imshow("ROI", roi)
+                            out.write(roi)
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                                break
+        
+            else:
+                break
+
+
+        # Release everything
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+
 
 
     def read_pupil_csv_file(self, filename):

@@ -265,7 +265,7 @@ def return_to_main_directory():
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["blink_test_2"]
+    files = ["blink_test_3"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
@@ -290,9 +290,12 @@ if __name__ == "__main__":
         detector.calculate_number_blinks()
 
         pupillometer = Pupillometer(pupil_features_2D_list)
+        pupillometer.crop_video_to_roi(name)
         pupillometer.pupil_locater("cropped_pupil_test_2_grey")
         pupillometer.read_pupil_csv_file("pupil_diamter.csv")
         pupillometer.plot_advanced_diameter_vs_time("test")
+        
+        
 
 
         print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
