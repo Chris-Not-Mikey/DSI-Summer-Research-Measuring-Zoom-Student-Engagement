@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import subprocess
 
 
 class Pupillometer:
@@ -9,7 +11,11 @@ class Pupillometer:
         self.pupil_independent_time = []
         self.pupil_radius_left_list = []
 
-    def calc_left_pupil_radius(self):
+
+    # Use OpenFace face landmark features to determine radius
+    # This will be less accurate than the results provided by
+    # the pupil locater
+    def calc_simple_pupil_radius(self):
         for i in self.pupil_features_2D_list:
 
             x_21_1 = (float(i["eye_lmk_x_25"]) - float(i["eye_lmk_x_21"])) ** 2
@@ -35,7 +41,13 @@ class Pupillometer:
             self.pupil_independent_time.append(float(i["timestamp"]))
 
 
-    def plot_radius_vs_time(self, name):
+    def plot_simple_radius_vs_time(self, name):
         path = "../../data/kernel_plots/" + name + "_pupil_radius"
         plt.scatter(self.pupil_independent_time, self.pupil_radius_left_list)
         plt.savefig(path)
+
+
+    def pupil_locater(self, name):
+        os.system("pwd")
+        os.chdir("../../PupilLocatorScripts")
+        subprocess.call(['python3', 'inferno.py', '../data/Media/' + name + '.mp4'])

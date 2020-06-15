@@ -257,14 +257,16 @@ def load_media_to_parse():
         print(video[0])
         files.append(video[0])
 
-# TODO: Remove. This is for speeding up computation while debuggin
-files = ["blink_test", "blink_test_2"]
+def return_to_main_directory():
+    os.chdir("../../src/scripts")
+
 
 # The heart of the algorithm
 if __name__ == "__main__":
 
-    files = ["blink_test", "blink_test_2"]
-
+    # TODO: Remove. This is for speeding up computation while debuggin
+    files = ["blink_test_2"]
+ 
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
 
@@ -288,8 +290,7 @@ if __name__ == "__main__":
         detector.calculate_number_blinks()
 
         pupillometer = Pupillometer(pupil_features_2D_list)
-        pupillometer.calc_left_pupil_radius()
-        pupillometer.plot_radius_vs_time(name)
+        pupillometer.pupil_locater("cropped_pupil_test_2_grey")
 
         print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
 
