@@ -291,6 +291,9 @@ if __name__ == "__main__":
 
         pupillometer = Pupillometer(pupil_features_2D_list)
         pupillometer.pupil_locater("cropped_pupil_test_2_grey")
+        pupillometer.read_pupil_csv_file("pupil_diamter.csv")
+        pupillometer.plot_advanced_diameter_vs_time("test")
+
 
         print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
 

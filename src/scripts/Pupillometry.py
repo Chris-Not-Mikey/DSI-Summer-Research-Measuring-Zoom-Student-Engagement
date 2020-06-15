@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import subprocess
+import csv
+import math
 
 
 class Pupillometer:
@@ -10,6 +12,8 @@ class Pupillometer:
         self.pupil_features_2D_list = pupil_features_2D_list
         self.pupil_independent_time = []
         self.pupil_radius_left_list = []
+        self.time_stamp = []
+        self.pupil_diameter = []
 
 
     # Use OpenFace face landmark features to determine radius
@@ -47,7 +51,35 @@ class Pupillometer:
         plt.savefig(path)
 
 
+    def plot_advanced_diameter_vs_time(self, name):
+        path = "../data/kernel_plots/" + name + "_pupil_diameter"
+        plt.scatter(self.time_stamp, self.pupil_diameter)
+        plt.savefig(path)
+
+
     def pupil_locater(self, name):
         os.system("pwd")
         os.chdir("../../PupilLocatorScripts")
         subprocess.call(['python3', 'inferno.py', '../data/Media/' + name + '.mp4'])
+
+
+    def read_pupil_csv_file(self, filename):
+        with open(filename, newline='') as f:
+            reader = csv.reader(f)
+            for row in reader:
+
+                counter = 0
+                for i in row:
+
+                    if counter == 0:
+                        self.time_stamp.append(int(i))
+
+                    if counter == 3:
+                        self.pupil_diameter.append(float(i))
+
+                    counter = counter + 1
+
+
+
+
+
