@@ -50,27 +50,35 @@ class Pupillometer:
             self.pupil_independent_time.append(float(i["timestamp"]))
 
 
+    # Plot Based on OpenFaces's method
     def plot_simple_radius_vs_time(self, name):
         path = "../../data/kernel_plots/" + name + "_pupil_radius"
         plt.scatter(self.pupil_independent_time, self.pupil_radius_left_list)
         plt.savefig(path)
+        plt.close()
 
 
+    # Plot based on Pupil Locater's method
     def plot_advanced_diameter_vs_time(self, name):
         path = "../data/kernel_plots/" + name + "_pupil_diameter"
         plt.scatter(self.time_stamp, self.pupil_diameter)
         plt.savefig(path)
+        plt.close()
 
 
-    def pupil_locater(self, name):
-        os.system("pwd")
-
+    def pupil_locater(self):
+        # cropped_output.mov is the name of the file that crop_video_to_roi generates
         subprocess.call(['python3', 'inferno.py', 'cropped_output.mov'])
 
 
-    def crop_video_to_roi(self, name):
-
+    def change_to_pupil_locater_dir(self):
         os.chdir("../../PupilLocatorScripts")
+
+
+    # Generate video footage of just the eye region.
+    # Takes the whole video and ouputs a greyscale video of just the left eye
+    # This can be changed to right eye
+    def crop_video_to_roi(self, name):
 
         detector = dlib.get_frontal_face_detector()
         predictor = dlib.shape_predictor('../data/shape_predictor_68_face_landmarks.dat')
@@ -78,13 +86,20 @@ class Pupillometer:
         cap = cv2.VideoCapture('../data/Media/' + name + ".mov")
 
         #output settings
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter('cropped_output.mov', fourcc, 1, (250,100))
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        out = cv2.VideoWriter('cropped_output.mov', fourcc, 30, (250,100))
 
-        while(cap.isOpened()):
+
+
+        pos_frame =  cap.get(cv2.CAP_PROP_POS_FRAMES)
+        while(True):
             ret, frame = cap.read()
 
+            write_roi = frame
+
             if ret==True:
+
+                pos_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)  #update frames read
 
                 #resize
                 frame = imutils.resize(frame, width=500)
@@ -117,17 +132,36 @@ class Pupillometer:
                             # extract the ROI of the face region as a separate image
                             (x, y, w, h) = cv2.boundingRect(np.array([shape[i:j]]))
                             roi = frame[y:y + h, x:x + w]
-                            roi = imutils.resize(roi, width=250, height=100, inter=cv2.INTER_CUBIC)
+                            roi = imutils.resize(roi, width=250, height=100)
+
+
+                            # TODO Worth invesitagating the tradeoff
+                            # roi = imutils.resize(roi, width=250, height=100, inter=cv2.INTER_CUBIC)
+                            # with cv2.resize. cv2 is more liberal, but imutils preservers aspect ratio
+
+                            dim = (250, 100) 
+                            roi = cv2.resize(roi, dim, interpolation=cv2.INTER_CUBIC)
                           
-                            
-                            #write the ROI to the file
-                            # cv2.imshow("frame", clone)
-                            # cv2.imshow("ROI", roi)
                             out.write(roi)
-                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                            write_roi = roi
+                            
+                            if cv2.waitKey(1) & 0xFF == ord('q'):                 
                                 break
+
+
+                #out.write(write_roi)
         
             else:
+
+                cap.set(cv2.CAP_PROP_POS_FRAMES, pos_frame-1)
+                print("frame is not ready")
+                # It is better to wait for a while for the next frame to be ready
+                cv2.waitKey(1000)
+
+
+            if  (cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+                # If the number of captured frames is equal to the total number of frames,
+                # we stop
                 break
 
 
@@ -137,7 +171,7 @@ class Pupillometer:
         cv2.destroyAllWindows()
 
 
-
+    # read csv file Pupil Locater script generates
     def read_pupil_csv_file(self, filename):
         with open(filename, newline='') as f:
             reader = csv.reader(f)
@@ -145,10 +179,12 @@ class Pupillometer:
 
                 counter = 0
                 for i in row:
-
+                    
+                    # frame
                     if counter == 0:
                         self.time_stamp.append(int(i))
 
+                    # Eye width
                     if counter == 3:
                         self.pupil_diameter.append(float(i))
 

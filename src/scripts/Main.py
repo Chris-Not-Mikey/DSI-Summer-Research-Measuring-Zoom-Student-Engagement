@@ -258,52 +258,54 @@ def load_media_to_parse():
         files.append(video[0])
 
 def return_to_main_directory():
-    os.chdir("../../src/scripts")
+    os.chdir("../src/scripts")
 
 
 # The heart of the algorithm
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["blink_test_3"]
+    files = [ "pupil_test"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
 
         # Use the OpenFace precompiled Binaries to start gaze tracking
         gaze_tracker = GazeTracker(gaze_angle_x,gaze_angle_y)
+        gaze_tracker.change_to_open_face_dir() 
+        gaze_tracker.track_gaze(name) # Track gaze. This will generate a CSV file we will then read
 
-        # Track gaze. This will generate a CSV file we will then read
-        gaze_tracker.track_gaze(name)
-
-        # Read the CSV file generated. This contains Eye Gaze data, as well as facial landmarks
+        # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
         # we will use to calculate Blink Rate and Pupil size
         read_csv_file('../../data/gaze_outputs/' + name + '.csv')
-
-        # Plot outputs of gaze
-        #gaze_tracker.plot_kernels(name)
+        gaze_tracker.plot_kernels(name) # Plot outputs of gaze
 
         # Now detect blinks in the footage
         detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list)
         detector.calculate_left_EAR()
-        # detector.plot_EAR_vs_time(file_name)
+        detector.plot_EAR_vs_time(name)
         detector.calculate_number_blinks()
 
+        # now measure pupillometry
         pupillometer = Pupillometer(pupil_features_2D_list)
+        pupillometer.change_to_pupil_locater_dir()
         pupillometer.crop_video_to_roi(name)
-        pupillometer.pupil_locater("cropped_pupil_test_2_grey")
-        pupillometer.read_pupil_csv_file("pupil_diamter.csv")
-        pupillometer.plot_advanced_diameter_vs_time("test")
-        
+        pupillometer.pupil_locater() # Measure Pupil size (diameter)
+        pupillometer.read_pupil_csv_file("pupil_diameter.csv")
+        plot_name = name + "_pupil_diameter"
+        pupillometer.plot_advanced_diameter_vs_time(plot_name)
         
 
-
+        # Print number of blinks at end of computation
         print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
 
         # Clear data. If this is not done, there will be some leftover data that WILL affect computation
         eye_features_2D_list.clear()
         ear_independent_time.clear()
         ear_left_list.clear()  
+
+        # Go back to main path
+        return_to_main_directory()
 
 
     print("#########################################")

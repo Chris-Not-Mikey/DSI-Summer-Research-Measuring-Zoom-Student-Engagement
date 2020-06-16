@@ -10,7 +10,7 @@ class BlinkDetector:
         self.ear_independent_time = ear_independent_time
         self.ear_left_list = ear_left_list
 
-
+    # Calculate the "EYE ASPECT RATIO" (EAR) in the left eye
     def calculate_left_EAR(self):
         for i in self.eye_features_2D_list:
 
@@ -31,12 +31,14 @@ class BlinkDetector:
             self.ear_left_list.append(ear_left)
             self.ear_independent_time.append(float(i["timestamp"]))
 
+    # Plot EAR against time
     def plot_EAR_vs_time(self, name):
         path = "../../data/kernel_plots/" + name + "_EAR"
         plt.scatter(self.ear_independent_time, self.ear_left_list)
         plt.savefig(path)
+        plt.close()
 
-
+    # Use EAR thresholding to calculate number of blinks
     def calculate_number_blinks(self):
 
         # Get local minimums from the EAR data recorded
@@ -56,6 +58,8 @@ class BlinkDetector:
                 if k < self.ear_threshold:
                     self.number_blinks = self.number_blinks + 1
 
+
+    # return number of recorded blinks
     def get_blinks(self):
         return self.number_blinks
 
