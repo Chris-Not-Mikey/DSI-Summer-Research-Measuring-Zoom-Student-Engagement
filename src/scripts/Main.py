@@ -84,6 +84,8 @@ data_template = {
 gaze_angle_x = []
 gaze_angle_y = []
 confidence_threshold = 0.98
+time_stamp = []
+gaze_features_2D_list = []
 
 # Blink detection variables
 eye_features_2D_list = []
@@ -106,6 +108,7 @@ def read_csv_file(filename):
 
             eye_features_2D_element = copy.deepcopy(data_template)
             pupil_features_2D_element = copy.deepcopy(data_template)
+            gaze_features_2D_element = copy.deepcopy(data_template)
 
             if counter != 0:
 
@@ -113,6 +116,7 @@ def read_csv_file(filename):
                 for i in row:
 
                     # Fill in the relevant data from reading the CSV file
+                    check_gaze_features_two(row_element, i, gaze_features_2D_element, indices)
                     check_gaze_features(row_element, i, indices)
                     check_eye_features(row_element, i, eye_features_2D_element, indices) 
                     check_pupil_features(row_element, i, pupil_features_2D_element, indices)           
@@ -131,6 +135,7 @@ def read_csv_file(filename):
             if counter >= 1:
                 eye_features_2D_list.append(eye_features_2D_element)
                 pupil_features_2D_list.append(pupil_features_2D_element)
+                gaze_features_2D_list.append(gaze_features_2D_element)
 
             counter = counter + 1
 
@@ -189,21 +194,37 @@ def check_eye_features(row_element, data, eye_features_2D_element, indices):
             break
     
 
+def check_gaze_features_two(row_element, data, gaze_features_2D_element, indices):
+    gaze_features = ["timestamp", "gaze_angle_x", "gaze_angle_y"]
+
+    for i in gaze_features:
+        if row_element == indices[i]:
+            gaze_features_2D_element[i] = data
+            break
+
+
+
 def check_gaze_features(row_element, data, indices):
-     # Check Confidence. If less than 0.98, we will skip that value
+     # Check Confidence. If less than 0.98, we will skip that value    
     if row_element == indices["confidence"]:
         
         if float(data) < confidence_threshold:
             return False
 
-    # Gaze Angle X is in column  11
+    # Gaze Angle X
     if row_element == indices["gaze_angle_x"]:
         gaze_angle_x.append(data)
         return True
         
-    # Gaze Angle Y is in column 12
+    # Gaze Angle Y 
     if row_element == indices["gaze_angle_y"]:
         gaze_angle_y.append(data)
+        return True
+
+    # Time Stamp
+
+    if row_element == indices["timestamp"]:
+        time_stamp.append(data)
         return True
     
     return True
@@ -258,52 +279,69 @@ def load_media_to_parse():
         files.append(video[0])
 
 def return_to_main_directory():
-    os.chdir("../../src/scripts")
+    os.chdir("../src/scripts")
 
 
 # The heart of the algorithm
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["blink_test_3"]
+    files = ["saccade_test_5"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
 
         # Use the OpenFace precompiled Binaries to start gaze tracking
-        gaze_tracker = GazeTracker(gaze_angle_x,gaze_angle_y)
+        gaze_tracker = GazeTracker(gaze_angle_x,gaze_angle_y, gaze_features_2D_list)
+        gaze_tracker.change_to_open_face_dir() 
+        gaze_tracker.track_gaze(name) # Track gaze. This will generate a CSV file we will then read
 
-        # Track gaze. This will generate a CSV file we will then read
-        gaze_tracker.track_gaze(name)
-
-        # Read the CSV file generated. This contains Eye Gaze data, as well as facial landmarks
+        # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
         # we will use to calculate Blink Rate and Pupil size
         read_csv_file('../../data/gaze_outputs/' + name + '.csv')
+        gaze_tracker.plot_kernels(name) # Plot outputs of gaze
 
-        # Plot outputs of gaze
-        #gaze_tracker.plot_kernels(name)
+        # convert to irf format
+        gaze_tracker.convert_to_irf_data_structure(name)
+        gaze_tracker.change_to_fixation_saccade_dir()
+        gaze_tracker.event_detection(name)
+        gaze_tracker.move_output_csv(name)
+      
+        return_to_main_directory()
+        gaze_tracker.change_to_open_face_dir()
+    
+        gaze_tracker.plot_saccade_profile(name)
+
+
 
         # Now detect blinks in the footage
         detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list)
         detector.calculate_left_EAR()
-        # detector.plot_EAR_vs_time(file_name)
+        detector.plot_EAR_vs_time(name)
         detector.calculate_number_blinks()
 
+        # now measure pupillometry
         pupillometer = Pupillometer(pupil_features_2D_list)
+        pupillometer.change_to_pupil_locater_dir()
         pupillometer.crop_video_to_roi(name)
-        pupillometer.pupil_locater("cropped_pupil_test_2_grey")
-        pupillometer.read_pupil_csv_file("pupil_diamter.csv")
-        pupillometer.plot_advanced_diameter_vs_time("test")
-        
+        pupillometer.pupil_locater() # Measure Pupil size (diameter)
+        pupillometer.read_pupil_csv_file("pupil_diameter.csv")
+        plot_name = name + "_pupil_diameter"
+        pupillometer.plot_advanced_diameter_vs_time(plot_name)
         
 
-
+        # Print number of blinks at end of computation
         print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
 
         # Clear data. If this is not done, there will be some leftover data that WILL affect computation
         eye_features_2D_list.clear()
         ear_independent_time.clear()
+        pupil_features_2D_list.clear()
+        gaze_features_2D_list.clear()
         ear_left_list.clear()  
+
+        # Go back to main path
+        return_to_main_directory()
 
 
     print("#########################################")
