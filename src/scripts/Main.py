@@ -309,7 +309,6 @@ if __name__ == "__main__":
       
         return_to_main_directory()
         gaze_tracker.change_to_open_face_dir()
-    
         gaze_tracker.plot_saccade_profile(name)
 
 
