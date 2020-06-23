@@ -286,7 +286,7 @@ def return_to_main_directory():
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["saccade_test_5"]
+    files = ["saccade_test_7"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:

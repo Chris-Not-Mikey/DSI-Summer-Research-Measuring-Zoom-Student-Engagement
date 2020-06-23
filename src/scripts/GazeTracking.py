@@ -44,13 +44,19 @@ class GazeTracker:
         src = 'etdata/openFaceGeneratedData_irf/i2mc/' + name + '_i2mc_raw.mat'
         dst = 'etdata/openFaceGeneratedData_irf/i2mc/' + name + '_i2mc.mat'
 
-        if os.path.exists(src):
-            # concert raw to normal
-            os.rename(src, dst)
-            # run again if this is the first run with a given media file
-            # this looks strange, but this is the expected behavior for the irf script.
-            # read the documenation here for more information: https://github.com/r-zemblys/irf
-            subprocess.call(['python2', 'run_irf.py', 'irf_2018-03-26_20-46-41', 'etdata', 'openFaceGeneratedData', '--save_csv'])
+        #if os.path.exists(src):
+        # concert raw to normal
+        #os.rename(src, dst)
+        os.chdir("./util_lib/I2MC-Dev/")
+        subprocess.call(['matlab', '-nodesktop', '-nosplash', '-r', 'I2MC_rz; exit;'])
+        os.chdir("../../")
+
+
+
+        # run again if this is the first run with a given media file
+        # this looks strange, but this is the expected behavior for the irf script.
+        # read the documenation here for more information: https://github.com/r-zemblys/irf
+        subprocess.call(['python2', 'run_irf.py', 'irf_2018-03-26_20-46-41', 'etdata', 'openFaceGeneratedData', '--save_csv'])
 
     # Run the program to track gaze angle
     def track_gaze(self, name):
@@ -80,8 +86,8 @@ class GazeTracker:
             y_radians = float(i["gaze_angle_y"])
             time = i["timestamp"]
 
-            x_degrees = x_radians * (180/math.pi)
-            y_degrees = y_radians * (180/math.pi)
+            x_degrees = x_radians * (180.0/math.pi)
+            y_degrees = y_radians * (180.0/math.pi)
 
             conversion = np.array([(np.float64(time), np.float32(x_degrees),np.float32(y_degrees),np.bool(False), np.uint8(0))]
             , dtype=self.dtype)
