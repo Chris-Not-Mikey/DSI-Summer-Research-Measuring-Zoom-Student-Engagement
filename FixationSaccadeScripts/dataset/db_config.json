@@ -1,0 +1,27 @@
+{
+    "events": [1, 2, 3],	
+    "n_trees": 32,		
+    "extr_kwargs": {		
+        "w": 100,		
+        "w_vel": 12,			
+        "w_dir": 22,
+        "interp": false,
+        "print_et": false	
+	},
+	"features": [		
+		"fs",
+		"disp",
+		"vel",
+		"acc",
+		"mean-diff",
+		"med-diff",
+		"rms",
+		"std",
+		"bcea",
+		"rms-diff",
+		"std-diff",
+		"bcea-diff",
+		"rayleightest",
+		"i2mc"
+	]
+}
