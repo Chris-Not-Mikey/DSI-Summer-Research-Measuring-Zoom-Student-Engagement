@@ -91,6 +91,7 @@ gaze_features_2D_list = []
 eye_features_2D_list = []
 ear_independent_time = []
 ear_left_list = []
+ear_right_list = []
 
 # Pupillometry Variables
 pupil_features_2D_list = []
@@ -286,7 +287,7 @@ def return_to_main_directory():
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["saccade_test_7"]
+    files = ["saccade_test_4"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
@@ -314,10 +315,18 @@ if __name__ == "__main__":
 
 
         # Now detect blinks in the footage
-        detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list)
+        detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list)
         detector.calculate_left_EAR()
+        detector.calculate_right_EAR()
+        detector.calculate_avg_EAR()
         detector.plot_EAR_vs_time(name)
-        detector.calculate_number_blinks()
+        detector.threshold_predict_number_blinks()
+        hidden_states, mus, sigmas, P, logProb, samples =  detector.hmm_predict_number_blinks(100, name)
+
+        print(hidden_states)
+        for i in hidden_states:
+            print(i)
+        
 
         # now measure pupillometry
         pupillometer = Pupillometer(pupil_features_2D_list)
@@ -338,6 +347,7 @@ if __name__ == "__main__":
         pupil_features_2D_list.clear()
         gaze_features_2D_list.clear()
         ear_left_list.clear()  
+        ear_right_list.clear()
 
         # Go back to main path
         return_to_main_directory()
