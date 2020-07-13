@@ -4,16 +4,20 @@ from scipy.signal import argrelextrema
 import seaborn as sns
 from hmmlearn.hmm import GaussianHMM
 import pickle
+import statistics
 
 class BlinkDetector:
     def __init__(self, eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list ):
         self.ear_threshold = 0.2
         self.number_blinks = 0
+        self.number_hmm_blinks = 0
         self.eye_features_2D_list = eye_features_2D_list
         self.ear_independent_time = ear_independent_time
         self.ear_left_list = ear_left_list
         self.ear_right_list = ear_right_list
         self.ear_avg_list = []
+        self.blink_duration = []
+        self.blink_frequency = []
 
 
     def calculate_left_EAR(self):
@@ -166,12 +170,62 @@ class BlinkDetector:
         filename = "../../data/kernel_plots/" + name + "_HMM_EAR.png"
         fig.savefig(filename)
         fig.clf()
-    
+
+
+        # temp variables for tracking blink duration and frequency
+        blink_length = 0
+        blink = False
+        blink_duration_rolling_list = []
+        blink_duration_rolling_mean = 0
+        blink_frequency_rolling_mean = 0
+        counter = 0
+
+        for i in hidden_states:
+            if i == 0:
+                blink = True
+                blink_length = blink_length + 1
+            
+
+
+            if i == 1 and blink == True:
+                
+                # 2 and 21 correspond to 60ms and 700ms respectively (see 4.2.2 of Soukupova-TR-2016-05)
+                if blink_length >= 2 and blink_length <= 21:
+                    self.number_hmm_blinks = self.number_hmm_blinks + 1
+                    blink_frequency_rolling_mean = blink_frequency_rolling_mean + 1
+
+                    blink_duration_rolling_list.append(blink_length)
+                    blink_duration_rolling_mean = statistics.mean(blink_duration_rolling_list)
+                    
+
+
+                blink = False
+                blink_length = 0
+
+            # 900 refers to 900 frames, equivalent to 30 seconds.
+            if counter == 900:
+
+                self.blink_duration.append(blink_duration_rolling_mean)
+                self.blink_frequency.append(blink_frequency_rolling_mean)
+
+                # Clear for next rolling calculation
+                blink_duration_rolling_mean = 0
+                blink_duration_rolling_list = []
+                blink_frequency_rolling_mean = 0
+
+                # Reset counter. 
+                counter = 0
+
+            counter = counter + 1
+
     
         return hidden_states, mus, sigmas, P, logProb, samples
     
 
     def get_blinks(self):
-        return self.number_blinks
+
+        print(self.blink_duration)
+        print(self.blink_frequency)
+        return self.number_hmm_blinks
 
         
