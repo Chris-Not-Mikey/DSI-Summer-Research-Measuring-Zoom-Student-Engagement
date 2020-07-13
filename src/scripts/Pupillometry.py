@@ -9,6 +9,7 @@ import imutils
 from imutils import face_utils
 import dlib
 import time
+import statistics
 
 
 class Pupillometer:
@@ -19,6 +20,7 @@ class Pupillometer:
         self.pupil_radius_left_list = []
         self.time_stamp = []
         self.pupil_diameter = []
+        self.pupil_size = []
 
 
     # Use OpenFace face landmark features to determine radius
@@ -168,10 +170,20 @@ class Pupillometer:
         cv2.destroyAllWindows()
 
 
+
+
     # read csv file Pupil Locater script generates
     def read_pupil_csv_file(self, filename):
+
+
+        # variables for pupil diameter rolling mean
+        pupil_size_rolling_mean = 0
+        pupil_size_rolling_list = []
+
         with open(filename, newline='') as f:
             reader = csv.reader(f)
+
+            row_counter = 0
             for row in reader:
 
                 counter = 0
@@ -185,6 +197,29 @@ class Pupillometer:
                     if counter == 3:
                         self.pupil_diameter.append(float(i))
 
+                        # update rolling values
+                        pupil_size_rolling_list.append(float(i))
+                        pupil_size_rolling_mean = statistics.mean(pupil_size_rolling_list)
+
                     counter = counter + 1
+
+
+                # 900 refers to 900 frames, equivalent to 30 seconds.
+                if row_counter == 900:
+
+                    # add pupil size
+                    self.pupil_size.append(pupil_size_rolling_mean)
+
+                    # clear for next rolling mean
+                    pupil_size_rolling_mean = 0
+                    pupil_size_rolling_list = []
+                    row_counter = 0
+
+
+                row_counter = row_counter + 1
+
+
+        print("this is pupil size:")
+        print(self.pupil_size)
 
 
