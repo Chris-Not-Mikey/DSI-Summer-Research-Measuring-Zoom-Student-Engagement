@@ -283,11 +283,41 @@ def return_to_main_directory():
     os.chdir("../src/scripts")
 
 
+def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
+    path = '../../data/engagement_features/' + name + '_engagement.csv'
+    with open(path, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+        counter = 0
+        csv_writer.writerow(["Row", "GL", "SF", "SL", "SV", "BF", "BD", "PS"])
+        for i in gaze_tracker.get_gaze_length():
+            engagement_features = []
+
+            engagement_features.append(gaze_tracker.get_gaze_length()[counter])
+            engagement_features.append(gaze_tracker.get_saccade_frequency()[counter])
+            engagement_features.append(gaze_tracker.get_saccade_length()[counter])
+            engagement_features.append(gaze_tracker.get_saccade_velocity()[counter])
+            engagement_features.append(detector.get_blink_frequency()[counter])
+            engagement_features.append(detector.get_blink_duration()[counter])
+            engagement_features.append(pupillometer.get_pupil_size()[counter])
+
+            csv_writer.writerow([counter, engagement_features[0], engagement_features[1],
+             engagement_features[2], engagement_features[3], engagement_features[4], engagement_features[5], engagement_features[6]])
+
+            counter = counter + 1
+
+
+    csvfile.close()
+
+
+
+
 # The heart of the algorithm
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["saccade_test_4"]
+    files = ["saccade_test_3"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
@@ -332,7 +362,7 @@ if __name__ == "__main__":
         pupillometer = Pupillometer(pupil_features_2D_list)
         pupillometer.change_to_pupil_locater_dir()
         pupillometer.crop_video_to_roi(name)
-        pupillometer.pupil_locater() # Measure Pupil size (diameter)
+        pupillometer.pupil_locater() # Measure Pupil size (diameter) # this will write ouput to a csv file
         pupillometer.read_pupil_csv_file("pupil_diameter.csv")
         plot_name = name + "_pupil_diameter"
         pupillometer.plot_advanced_diameter_vs_time(plot_name)
@@ -351,6 +381,19 @@ if __name__ == "__main__":
 
         # Go back to main path
         return_to_main_directory()
+
+
+
+        write_results_to_csv(name, gaze_tracker, detector, pupillometer)
+        print("File Results: ")
+        print(gaze_tracker.get_gaze_length())
+        print(gaze_tracker.get_saccade_frequency())
+        print(gaze_tracker.get_saccade_length())
+        print(gaze_tracker.get_saccade_velocity())
+        print(detector.get_blink_frequency())
+        print(detector.get_blink_duration())
+        print(pupillometer.get_pupil_size())
+
 
 
     print("#########################################")
