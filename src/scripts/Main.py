@@ -10,6 +10,8 @@ import copy
 from BlinkDetection import BlinkDetector
 from GazeTracking import GazeTracker
 from Pupillometry import Pupillometer
+from EngagementPredictor import EngagementPredictor
+
 
 # This script will run Gaze Detection from OpenFace's provided Feature Extraction code
 # From this, it will generate multiavariate kernel density estimate
@@ -386,13 +388,11 @@ if __name__ == "__main__":
 
         write_results_to_csv(name, gaze_tracker, detector, pupillometer)
         print("File Results: ")
-        print(gaze_tracker.get_gaze_length())
-        print(gaze_tracker.get_saccade_frequency())
-        print(gaze_tracker.get_saccade_length())
-        print(gaze_tracker.get_saccade_velocity())
-        print(detector.get_blink_frequency())
-        print(detector.get_blink_duration())
-        print(pupillometer.get_pupil_size())
+
+
+        predictor = EngagementPredictor(gaze_tracker.get_gaze_length(), gaze_tracker.get_saccade_frequency(),
+        gaze_tracker.get_saccade_length(), gaze_tracker.get_saccade_velocity(), detector.get_blink_frequency(),
+        detector.get_blink_duration(), pupillometer.get_pupil_size())
 
 
 
