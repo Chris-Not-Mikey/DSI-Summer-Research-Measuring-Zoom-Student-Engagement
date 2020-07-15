@@ -3,6 +3,8 @@ import sys
 import pickle
 import csv
 
+import tensorflow as tf
+
 from keras.datasets import imdb
 from keras.models import Sequential
 from keras.layers import Dense
@@ -77,6 +79,8 @@ class EngagementPredictor:
 
     def predict_engagement(self):
 
+        cnn_filename = "../../data/cnn_models/"
+
         np.random.seed(7)
         # load the dataset but only keep the top n words, zero the rest
         top_words = 5000
@@ -87,42 +91,54 @@ class EngagementPredictor:
 
 
         X_train = X[0:3]
-        print(X_train)
-        y_train = y[0:3]
 
-        X_test = X[3:]
-        print(X_test)
-        y_test = y[3:]
+        y_train = y[0:3]
+     
+
+        X_test = X[:]
+        y_test = y[:]
 
    
         # truncate and pad input sequences
         max_review_length = 500
         X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
         X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
-        # create the model
-        embedding_vecor_length = 32
-        model = Sequential()
-        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
-        model.add(LSTM(100))
-        model.add(Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        print(model.summary())
-        model.fit(X_train, y_train, epochs=3, batch_size=64)
+
+        # MAKE A NEW MODEL
+        # # create the model
+        # embedding_vecor_length = 32
+        # model = Sequential()
+        # model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+        # model.add(LSTM(100))
+        # model.add(Dense(1, activation='sigmoid'))
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        # print(model.summary())
+        # model.fit(X_train, y_train, epochs=3, batch_size=64)
+    
+        # # save model
+    
+        # model.save(cnn_filename)
+
+
+        # load model
+        model = tf.keras.models.load_model(cnn_filename)
+
         # Final evaluation of the model
         scores = model.evaluate(X_test, y_test, verbose=0)
+        print(X_train)
         print("Accuracy: %.2f%%" % (scores[1]*100))
 
 
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    # get name from command string
-    name = sys.argv[1]
-    predictor = EngagementPredictor(name)
-    predictor.read_csv_file()
-    predictor.predict_engagement()
+#     # get name from command string
+#     name = sys.argv[1]
+#     predictor = EngagementPredictor(name)
+#     predictor.read_csv_file()
+#     predictor.predict_engagement()
 
 
 
