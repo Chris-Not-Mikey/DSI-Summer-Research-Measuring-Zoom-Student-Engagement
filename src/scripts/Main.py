@@ -10,7 +10,6 @@ import copy
 from BlinkDetection import BlinkDetector
 from GazeTracking import GazeTracker
 from Pupillometry import Pupillometer
-from EngagementPredictor import EngagementPredictor
 
 
 # This script will run Gaze Detection from OpenFace's provided Feature Extraction code
@@ -292,7 +291,7 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
         counter = 0
-        csv_writer.writerow(["Row", "GL", "SF", "SL", "SV", "BF", "BD", "PS"])
+        csv_writer.writerow(["Row", "GL", "SF", "SL", "SV", "BF", "BD", "PS", "ENG"])
         for i in gaze_tracker.get_gaze_length():
             engagement_features = []
 
@@ -304,8 +303,10 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
             engagement_features.append(detector.get_blink_duration()[counter])
             engagement_features.append(pupillometer.get_pupil_size()[counter])
 
+            # 0 = not engaged (default)
+            # 1 = engaged
             csv_writer.writerow([counter, engagement_features[0], engagement_features[1],
-             engagement_features[2], engagement_features[3], engagement_features[4], engagement_features[5], engagement_features[6]])
+             engagement_features[2], engagement_features[3], engagement_features[4], engagement_features[5], engagement_features[6], 0])
 
             counter = counter + 1
 
@@ -313,87 +314,84 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
     csvfile.close()
 
 
+def predict_engagement(name):
+    subprocess.call(['python3', 'EngagementPredictor.py', name])
 
 
 # The heart of the algorithm
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["saccade_test_3"]
+    files = ["blink_test_4"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
 
-        # Use the OpenFace precompiled Binaries to start gaze tracking
-        gaze_tracker = GazeTracker(gaze_angle_x,gaze_angle_y, gaze_features_2D_list)
-        gaze_tracker.change_to_open_face_dir() 
-        gaze_tracker.track_gaze(name) # Track gaze. This will generate a CSV file we will then read
+        # # Use the OpenFace precompiled Binaries to start gaze tracking
+        # gaze_tracker = GazeTracker(gaze_angle_x,gaze_angle_y, gaze_features_2D_list)
+        # gaze_tracker.change_to_open_face_dir() 
+        # gaze_tracker.track_gaze(name) # Track gaze. This will generate a CSV file we will then read
 
-        # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
-        # we will use to calculate Blink Rate and Pupil size
-        read_csv_file('../../data/gaze_outputs/' + name + '.csv')
-        gaze_tracker.plot_kernels(name) # Plot outputs of gaze
+        # # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
+        # # we will use to calculate Blink Rate and Pupil size
+        # read_csv_file('../../data/gaze_outputs/' + name + '.csv')
+        # gaze_tracker.plot_kernels(name) # Plot outputs of gaze
 
-        # convert to irf format
-        gaze_tracker.convert_to_irf_data_structure(name)
-        gaze_tracker.change_to_fixation_saccade_dir()
-        gaze_tracker.event_detection(name)
-        gaze_tracker.move_output_csv(name)
+        # # convert to irf format
+        # gaze_tracker.convert_to_irf_data_structure(name)
+        # gaze_tracker.change_to_fixation_saccade_dir()
+        # gaze_tracker.event_detection(name)
+        # gaze_tracker.move_output_csv(name)
       
-        return_to_main_directory()
-        gaze_tracker.change_to_open_face_dir()
-        gaze_tracker.plot_saccade_profile(name)
+        # return_to_main_directory()
+        # gaze_tracker.change_to_open_face_dir()
+        # gaze_tracker.plot_saccade_profile(name)
 
 
 
-        # Now detect blinks in the footage
-        detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list)
-        detector.calculate_left_EAR()
-        detector.calculate_right_EAR()
-        detector.calculate_avg_EAR()
-        detector.plot_EAR_vs_time(name)
-        detector.threshold_predict_number_blinks()
-        hidden_states, mus, sigmas, P, logProb, samples =  detector.hmm_predict_number_blinks(100, name)
+        # # Now detect blinks in the footage
+        # detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list)
+        # detector.calculate_left_EAR()
+        # detector.calculate_right_EAR()
+        # detector.calculate_avg_EAR()
+        # detector.plot_EAR_vs_time(name)
+        # detector.threshold_predict_number_blinks()
+        # hidden_states, mus, sigmas, P, logProb, samples =  detector.hmm_predict_number_blinks(100, name)
 
-        print(hidden_states)
-        for i in hidden_states:
-            print(i)
+        # print(hidden_states)
+        # for i in hidden_states:
+        #     print(i)
         
 
-        # now measure pupillometry
-        pupillometer = Pupillometer(pupil_features_2D_list)
-        pupillometer.change_to_pupil_locater_dir()
-        pupillometer.crop_video_to_roi(name)
-        pupillometer.pupil_locater() # Measure Pupil size (diameter) # this will write ouput to a csv file
-        pupillometer.read_pupil_csv_file("pupil_diameter.csv")
-        plot_name = name + "_pupil_diameter"
-        pupillometer.plot_advanced_diameter_vs_time(plot_name)
+        # # now measure pupillometry
+        # pupillometer = Pupillometer(pupil_features_2D_list)
+        # pupillometer.change_to_pupil_locater_dir()
+        # pupillometer.crop_video_to_roi(name)
+        # pupillometer.pupil_locater() # Measure Pupil size (diameter) # this will write ouput to a csv file
+        # pupillometer.read_pupil_csv_file("pupil_diameter.csv")
+        # plot_name = name + "_pupil_diameter"
+        # pupillometer.plot_advanced_diameter_vs_time(plot_name)
         
 
-        # Print number of blinks at end of computation
-        print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
+        # # Print number of blinks at end of computation
+        # print("There were " + str(detector.get_blinks()) + " blinks recorded in  " + name)
 
-        # Clear data. If this is not done, there will be some leftover data that WILL affect computation
-        eye_features_2D_list.clear()
-        ear_independent_time.clear()
-        pupil_features_2D_list.clear()
-        gaze_features_2D_list.clear()
-        ear_left_list.clear()  
-        ear_right_list.clear()
+        # # Clear data. If this is not done, there will be some leftover data that WILL affect computation
+        # eye_features_2D_list.clear()
+        # ear_independent_time.clear()
+        # pupil_features_2D_list.clear()
+        # gaze_features_2D_list.clear()
+        # ear_left_list.clear()  
+        # ear_right_list.clear()
 
-        # Go back to main path
-        return_to_main_directory()
-
-
-
-        write_results_to_csv(name, gaze_tracker, detector, pupillometer)
-        print("File Results: ")
+        # # Go back to main path
+        # return_to_main_directory()
 
 
-        predictor = EngagementPredictor(gaze_tracker.get_gaze_length(), gaze_tracker.get_saccade_frequency(),
-        gaze_tracker.get_saccade_length(), gaze_tracker.get_saccade_velocity(), detector.get_blink_frequency(),
-        detector.get_blink_duration(), pupillometer.get_pupil_size())
+        # write_results_to_csv(name, gaze_tracker, detector, pupillometer)
 
+        # make final predictions based on collected ocular data
+        predict_engagement(name)
 
 
     print("#########################################")

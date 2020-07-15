@@ -3,10 +3,12 @@ import sys
 import pickle
 import csv
 
-from sklearn.svm import LinearSVC
-from pystruct.datasets import load_letters
-from pystruct.models import ChainCRF
-from pystruct.learners import FrankWolfeSSVM
+from keras.datasets import imdb
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers.embeddings import Embedding
+from keras.preprocessing import sequence
 
 
 class EngagementPredictor:
@@ -35,26 +37,26 @@ class EngagementPredictor:
             counter = 0
             for row in reader:
                 if counter != 0:
-                    self.gaze_length.append(row[1])
-                    self.saccade_frequency.append(row[2])
-                    self.saccade_length.append(row[3])
-                    self.saccade_velocity.append(row[4])
-                    self.blink_rate.append(row[5])
-                    self.blink_duration.append(row[6])
-                    self.pupil_size.append(row[7])
+                    self.gaze_length.append(np.float32(row[1]))
+                    self.saccade_frequency.append(np.float32(row[2]))
+                    self.saccade_length.append(np.float32(row[3]))
+                    self.saccade_velocity.append(np.float32(row[4]))
+                    self.blink_rate.append(np.float32(row[5]))
+                    self.blink_duration.append(np.float32(row[6]))
+                    self.pupil_size.append(np.float32(row[7]))
 
-                    engagement_element = [np.int32(row[8])]
+                    engagement_element = np.int64(row[8])
                     self.engagement.append(engagement_element)
        
                     element = []
 
-                    element_1 = [np.float32(row[1])]
-                    element_2 = [np.float32(row[2])]
-                    element_3 = [np.float32(row[3])]
-                    element_4 = [np.float32(row[4])]
-                    element_5 = [np.float32(row[5])]
-                    element_6 = [np.float32(row[6])]
-                    element_7 = [np.float32(row[7])]
+                    element_1 = float(row[1])
+                    element_2 = float(row[2])
+                    element_3 = float(row[3])
+                    element_4 = float(row[4])
+                    element_5 = float(row[5])
+                    element_6 = float(row[6])
+                    element_7 = float(row[7])
 
 
                     element.append(element_1)
@@ -75,24 +77,43 @@ class EngagementPredictor:
 
     def predict_engagement(self):
 
+        np.random.seed(7)
+        # load the dataset but only keep the top n words, zero the rest
+        top_words = 5000
+        #(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=top_words)
 
-
-
-        model = ChainCRF()
-        ssvm = FrankWolfeSSVM(model=model, C=.1, max_iter=11)
-        
         X = np.array(self.master_list, dtype=np.float32)
-        y = np.array(self.engagement, dtype=np.int32)
-      
-        # X_train = X[0:5]
-        # y_train = y[0:5]
+        y = np.array(self.engagement, dtype=np.int64)
 
-        ssvm.fit(X, y)
 
-        # X_test = X[5]
-        # y_test = y[5]
+        X_train = X[0:3]
+        print(X_train)
+        y_train = y[0:3]
 
-        print("Test score with chain: %f" % ssvm.score(X, y))
+        X_test = X[3:]
+        print(X_test)
+        y_test = y[3:]
+
+   
+        # truncate and pad input sequences
+        max_review_length = 500
+        X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+        X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+        # create the model
+        embedding_vecor_length = 32
+        model = Sequential()
+        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+        model.add(LSTM(100))
+        model.add(Dense(1, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        print(model.summary())
+        model.fit(X_train, y_train, epochs=3, batch_size=64)
+        # Final evaluation of the model
+        scores = model.evaluate(X_test, y_test, verbose=0)
+        print("Accuracy: %.2f%%" % (scores[1]*100))
+
+
+
 
 
 if __name__ == "__main__":
