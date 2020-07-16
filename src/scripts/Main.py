@@ -10,6 +10,7 @@ import copy
 from BlinkDetection import BlinkDetector
 from GazeTracking import GazeTracker
 from Pupillometry import Pupillometer
+from EngagementPredictor import EngagementPredictor
 
 
 # This script will run Gaze Detection from OpenFace's provided Feature Extraction code
@@ -322,7 +323,7 @@ def predict_engagement(name):
 if __name__ == "__main__":
 
     # TODO: Remove. This is for speeding up computation while debuggin
-    files = ["blink_test_4"]
+    files = ["blink_test_6"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     for name in files:
@@ -391,7 +392,17 @@ if __name__ == "__main__":
         # write_results_to_csv(name, gaze_tracker, detector, pupillometer)
 
         # make final predictions based on collected ocular data
-        predict_engagement(name)
+        predictor = EngagementPredictor(name)
+        predictor.read_csv_file()
+        train = False
+        predictor.predict_engagement(train)
+        if train == False:
+            predictor.determine_results()
+            predictor.plot_results(name)
+
+
+
+
 
 
     print("#########################################")

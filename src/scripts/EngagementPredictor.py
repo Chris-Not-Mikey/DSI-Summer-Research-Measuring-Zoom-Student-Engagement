@@ -4,6 +4,8 @@ import pickle
 import csv
 
 import tensorflow as tf
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from keras.datasets import imdb
 from keras.models import Sequential
@@ -27,6 +29,8 @@ class EngagementPredictor:
         self.master_list = []
         self.complete_list = []
         self.engagement = []
+        self.results = []
+        self.raw_results = []
 
         
 
@@ -77,24 +81,19 @@ class EngagementPredictor:
                 counter = counter + 1
 
 
-    def predict_engagement(self):
+    def predict_engagement(self, train):
 
         cnn_filename = "../../data/cnn_models/"
 
         np.random.seed(7)
-        # load the dataset but only keep the top n words, zero the rest
-        top_words = 5000
-        #(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=top_words)
+   
 
         X = np.array(self.master_list, dtype=np.float32)
         y = np.array(self.engagement, dtype=np.int64)
 
-
         X_train = X[0:3]
-
         y_train = y[0:3]
-     
-
+    
         X_test = X[:]
         y_test = y[:]
 
@@ -104,48 +103,92 @@ class EngagementPredictor:
         X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
         X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
 
-        # MAKE A NEW MODEL
-        # # create the model
-        # embedding_vecor_length = 32
-        # model = Sequential()
-        # model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
-        # model.add(LSTM(100))
-        # model.add(Dense(1, activation='sigmoid'))
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        # print(model.summary())
-        # model.fit(X_train, y_train, epochs=3, batch_size=64)
-    
-        # # save model
-    
-        # model.save(cnn_filename)
+   
 
+        if train == True:
+            self.train_model(cnn_filename, X_train, y_train)
 
         # load model
         model = tf.keras.models.load_model(cnn_filename)
 
-        # Final evaluation of the model
-        scores = model.evaluate(X_test, y_test, verbose=0)
-        print(X_train)
-        print("Accuracy: %.2f%%" % (scores[1]*100))
+        # Final evaluation of the model for training
+        if train == True:
+            scores = model.evaluate(X_test, y_test, verbose=0)
+            print("Accuracy: %.2f%%" % (scores[1]*100))
+
+        # Predictions made with non training model
+        else:
+            print("Printing Predicions")
+            self.raw_results = model.predict(X_test)
+            self.results = model.predict_classes(X_test)
 
 
 
+    def train_model(self, cnn_filename, X_train, y_train):
 
-
-# if __name__ == "__main__":
-
-#     # get name from command string
-#     name = sys.argv[1]
-#     predictor = EngagementPredictor(name)
-#     predictor.read_csv_file()
-#     predictor.predict_engagement()
-
-
-
-       
-
-
-
+        # MAKE A NEW MODEL
+        # create the model
+        top_words = 5000
+        embedding_vecor_length = 32
+        model = Sequential()
+        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+        model.add(LSTM(100))
+        model.add(Dense(1, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        print(model.summary())
+        model.fit(X_train, y_train, epochs=3, batch_size=64)
     
+        # save model
+        model.save(cnn_filename)
 
-      
+
+    def determine_results(self):
+
+        engaged = 0
+        for i in self.results:
+            if i[0] == 1:
+                engaged = engaged + 1
+
+        num_results = len(self.results)
+        result = engaged/num_results
+
+        if result > 0.5:
+            print("Student Was engaged")
+        else:
+            print("Student was not engaged")
+
+
+    def plot_results(self, name):
+
+        Y = []
+        X = []
+        for i in self.results:
+            Y.append(i[0])
+
+        for j in self.raw_results:
+            X.append(j[0])
+
+        X = np.array(X)
+        Y = np.array(Y)
+
+
+        sns.set()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+    
+        xs = np.arange(len(X))+0
+        masks = Y == 0
+        ax.scatter(xs[masks], X[masks], c='r', label='Not Engaged')
+        masks = Y == 1
+        ax.scatter(xs[masks], X[masks], c='b', label='Engaged')
+        ax.plot(xs, X, c='k')
+        
+        ax.set_xlabel('engagement')
+        ax.set_ylabel('engagement metric')
+        fig.subplots_adjust(bottom=0.2)
+        handles, labels = plt.gca().get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center', ncol=2, frameon=True)
+
+        filename = "../../data/kernel_plots/" + name + "_engagement.png"
+        fig.savefig(filename)
+        fig.clf()
