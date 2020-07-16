@@ -21,41 +21,44 @@ class Pupillometer:
         self.time_stamp = []
         self.pupil_diameter = []
         self.pupil_size = []
+        self.pupil_simple_size = []
 
 
     # Use OpenFace face landmark features to determine radius
     # This will be less accurate than the results provided by
     # the pupil locater
-    def calc_simple_pupil_radius(self):
+    def calc_simple_pupil_diameter(self):
         for i in self.pupil_features_2D_list:
 
             x_21_1 = (float(i["eye_lmk_x_25"]) - float(i["eye_lmk_x_21"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_25"]) - float(i["eye_lmk_y_21"])) ** 2
-            radius_1 = (np.sqrt((x_21_1 + y_21_1)))/2.0
+            radius_1 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_26"]) - float(i["eye_lmk_x_22"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_26"]) - float(i["eye_lmk_y_22"])) ** 2
-            radius_2 = (np.sqrt((x_21_1 + y_21_1)))/2.0
+            radius_2 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_27"]) - float(i["eye_lmk_x_23"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_27"]) - float(i["eye_lmk_y_23"])) ** 2
-            radius_3 = (np.sqrt((x_21_1 + y_21_1)))/2.0
+            radius_3 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_20"]) - float(i["eye_lmk_x_24"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_20"]) - float(i["eye_lmk_y_24"])) ** 2
-            radius_4 = (np.sqrt((x_21_1 + y_21_1)))/2.0
+            radius_4 = (np.sqrt((x_21_1 + y_21_1)))
 
             
             radius = np.average([radius_1, radius_2, radius_3, radius_4])
 
             self.pupil_radius_left_list.append(radius)
             self.pupil_independent_time.append(float(i["timestamp"]))
+            self.pupil_simple_size.append(radius)
+
 
 
     # Plot Based on OpenFaces's method
-    def plot_simple_radius_vs_time(self, name):
-        path = "../../data/kernel_plots/" + name + "_pupil_radius"
-        plt.scatter(self.pupil_independent_time, self.pupil_radius_left_list)
+    def plot_simple_diameter_vs_time(self, name):
+        path = "../data/kernel_plots/" + name + "_pupil_simple_diameter"
+        plt.scatter(self.pupil_independent_time, self.pupil_simple_size)
         plt.savefig(path)
         plt.close()
 
@@ -63,11 +66,13 @@ class Pupillometer:
     # Plot based on Pupil Locater's method
     def plot_advanced_diameter_vs_time(self, name):
         path = "../data/kernel_plots/" + name + "_pupil_diameter"
-        plt.scatter(self.time_stamp, self.pupil_diameter)
+
+        adjusted_fps = [x / 30 for x in self.time_stamp]
+        plt.scatter(adjusted_fps, self.pupil_diameter)
         plt.savefig(path)
         plt.close()
 
-
+    # CNN based approach to finding pupils
     def pupil_locater(self):
         # cropped_output.mov is the name of the file that crop_video_to_roi generates
         subprocess.call(['python3', 'inferno.py', 'cropped_output.mov'])
@@ -90,8 +95,6 @@ class Pupillometer:
         #output settings
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         out = cv2.VideoWriter('cropped_output.mov', fourcc, 30, (250,100))
-
-
 
         pos_frame =  cap.get(cv2.CAP_PROP_POS_FRAMES)
         while(True):
@@ -163,18 +166,14 @@ class Pupillometer:
                 # we stop
                 break
 
-
         # Release everything
         cap.release()
         out.release()
         cv2.destroyAllWindows()
 
 
-
-
     # read csv file Pupil Locater script generates
     def read_pupil_csv_file(self, filename):
-
 
         # variables for pupil diameter rolling mean
         pupil_size_rolling_mean = 0
@@ -215,11 +214,18 @@ class Pupillometer:
                     pupil_size_rolling_list = []
                     row_counter = 0
 
-
                 row_counter = row_counter + 1
 
 
-        print("this is pupil size:")
-        print(self.pupil_size)
+
+    # Final Output for Engagement prediction (pupil size)
+    def get_pupil_size(self):
+        return self.pupil_size
+
+    # Final Output for Engagement prediction (pupil size)
+    def get_simple_pupil_size(self):
+        return self.pupil_simple_size
+    
+
 
 

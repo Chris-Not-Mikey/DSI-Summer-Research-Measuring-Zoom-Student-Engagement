@@ -11,6 +11,8 @@ from keras.datasets import imdb
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
+from keras.layers.convolutional import Conv1D
+from keras.layers.convolutional import MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 
@@ -26,15 +28,16 @@ class EngagementPredictor:
         self.blink_rate = []
         self.blink_duration = []
         self.pupil_size = []
+        self.pupil_size_simple = []
         self.master_list = []
         self.complete_list = []
         self.engagement = []
         self.results = []
         self.raw_results = []
 
-        
-
-
+    
+    # Rads the CSV file that is created with all the ocular measurements
+    # Each measurment is taken at a 30 seconds timestamp
     def read_csv_file(self):
         path = '../../data/engagement_features/' + self.name + '_engagement.csv'
         with open(path) as s:
@@ -50,8 +53,9 @@ class EngagementPredictor:
                     self.blink_rate.append(np.float32(row[5]))
                     self.blink_duration.append(np.float32(row[6]))
                     self.pupil_size.append(np.float32(row[7]))
+                    self.pupil_size_simple.append(np.float32(row[8]))
 
-                    engagement_element = np.int64(row[8])
+                    engagement_element = np.int64(row[9])
                     self.engagement.append(engagement_element)
        
                     element = []
@@ -84,10 +88,8 @@ class EngagementPredictor:
     def predict_engagement(self, train):
 
         cnn_filename = "../../data/cnn_models/"
-
         np.random.seed(7)
    
-
         X = np.array(self.master_list, dtype=np.float32)
         y = np.array(self.engagement, dtype=np.int64)
 
@@ -103,10 +105,8 @@ class EngagementPredictor:
         X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
         X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
 
-   
-
         if train == True:
-            self.train_model(cnn_filename, X_train, y_train)
+            self.train_model(cnn_filename, X_train, y_train, max_review_length)
 
         # load model
         model = tf.keras.models.load_model(cnn_filename)
@@ -124,7 +124,7 @@ class EngagementPredictor:
 
 
 
-    def train_model(self, cnn_filename, X_train, y_train):
+    def train_model(self, cnn_filename, X_train, y_train, max_review_length):
 
         # MAKE A NEW MODEL
         # create the model
@@ -132,6 +132,8 @@ class EngagementPredictor:
         embedding_vecor_length = 32
         model = Sequential()
         model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+        model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
+        model.add(MaxPooling1D(pool_size=2))
         model.add(LSTM(100))
         model.add(Dense(1, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -183,7 +185,7 @@ class EngagementPredictor:
         ax.scatter(xs[masks], X[masks], c='b', label='Engaged')
         ax.plot(xs, X, c='k')
         
-        ax.set_xlabel('engagement')
+        ax.set_xlabel('time (seconds)')
         ax.set_ylabel('engagement metric')
         fig.subplots_adjust(bottom=0.2)
         handles, labels = plt.gca().get_legend_handles_labels()

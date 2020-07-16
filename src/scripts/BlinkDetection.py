@@ -59,6 +59,8 @@ class BlinkDetector:
             ear_right = (distance_right_1 + distance_right_2) / (2.0 * (distance_right_3))
             self.ear_right_list.append(ear_right)
 
+
+    # Get the average of the EAR in both the left and the right eye
     def calculate_avg_EAR(self):
 
         temp_avg = zip(self.ear_left_list, self.ear_right_list)
@@ -66,14 +68,16 @@ class BlinkDetector:
             EAR = (i[0] + i[1])/2
             self.ear_avg_list.append(EAR)
          
-
-
+    #plot ear against time
     def plot_EAR_vs_time(self, name):
         path = "../../data/kernel_plots/" + name + "_EAR"
         plt.scatter(self.ear_independent_time, self.ear_avg_list)
         plt.savefig(path)
 
 
+    # Thresholding is the simplest blink detection method
+    # We will not use this for our feature data
+    # The HMM based apporach will be used instead
     def threshold_predict_number_blinks(self):
 
         # Get local minimums from the EAR data recorded
@@ -86,7 +90,6 @@ class BlinkDetector:
         for i in min_index:
             minimums.append(ear_array[i])
 
-
         # see if the minimums make the cutoff
         for j in minimums:
             for k in j:
@@ -94,34 +97,35 @@ class BlinkDetector:
                     self.number_blinks = self.number_blinks + 1
 
 
-
-
-    def hmm_predict_number_blinks(self, nSamples, name):
+    # A more advanced version for predicting the blink frequency and the blink
+    # duration. Fare more accurate than simple thresholding.
+    # Also, takes into account the duration of the blink, unlike thresholding.
+    def hmm_predict_number_blinks(self, nSamples, name, train):
      
         # load EAR data per frame
         AnnualQ = self.ear_avg_list
-        
-        #  log transform the data and fit the HMM
-        #Q = np.log(AnnualQ)
-        #Q = AnnualQ
-        Q = np.array(AnnualQ)
-        # hidden_states, mus, sigmas, P, logProb, samples = fitHMM(logQ, 100)
- 
-        # fit Gaussian HMM to Q
-        # model = GaussianHMM(n_components=2, covariance_type="diag", n_iter=1000, init_params="stm", params="stc")
-
-        # model.startprob_ = np.array([0.05, 0.95])
-        # model.transmat_ = np.array([[0.3, 0.7],[0.3, 0.7]])
-        # model.means_ = np.array([[500, 500], [500, 500]])
-
-        # # model.startprob_ = np.array([0.99, 0.01])
-        # # model.transmat_ = np.array([[0.99, 0.01],[0.99, 0.01]])
-        # # model.means_ = np.array([[200,  0.15], [200, 0.35]])
-        
-        # model.fit(np.reshape(Q,[len(Q),1]))
 
         hmm_filename = "../../data/hmm_models/" + "try_this" + ".pkl"
-        #with open(hmm_filename, "wb") as file: pickle.dump(model, file)
+
+
+        Q = np.array(AnnualQ)
+        if train == True:
+            #  log transform the data and fit the HMM
+            #Q = np.log(AnnualQ)
+            #Q = AnnualQ
+           
+            hidden_states, mus, sigmas, P, logProb, samples = fitHMM(Q, 100)
+    
+            #fit Gaussian HMM to Q
+            model = GaussianHMM(n_components=2, covariance_type="diag", n_iter=1000, init_params="stm", params="stc")
+
+            model.startprob_ = np.array([0.05, 0.95])
+            model.transmat_ = np.array([[0.3, 0.7],[0.3, 0.7]])
+            model.means_ = np.array([[500, 500], [500, 500]])
+
+        
+            model.fit(np.reshape(Q,[len(Q),1]))
+            with open(hmm_filename, "wb") as file: pickle.dump(model, file)
 
 
         with open(hmm_filename, "rb") as file:
@@ -186,7 +190,6 @@ class BlinkDetector:
                 blink_length = blink_length + 1
             
 
-
             if i == 1 and blink == True:
                 
                 # 2 and 21 correspond to 60ms and 700ms respectively (see 4.2.2 of Soukupova-TR-2016-05)
@@ -194,11 +197,10 @@ class BlinkDetector:
                     self.number_hmm_blinks = self.number_hmm_blinks + 1
                     blink_frequency_rolling_mean = blink_frequency_rolling_mean + 1
 
-                    blink_duration_rolling_list.append(blink_length)
+                    # divide by 30 fps to convert to seconds
+                    blink_duration_rolling_list.append(blink_length/30)
                     blink_duration_rolling_mean = statistics.mean(blink_duration_rolling_list)
                     
-
-
                 blink = False
                 blink_length = 0
 
@@ -220,12 +222,19 @@ class BlinkDetector:
 
     
         return hidden_states, mus, sigmas, P, logProb, samples
+
+
+    # Final Output for Engagement prediction (duration)
+    def get_blink_duration(self):
+        return self.blink_duration
+
+
+    # Final Output for Engagement prediction (frequency)
+    def get_blink_frequency(self):
+        return self.blink_frequency
     
 
     def get_blinks(self):
-
-        print(self.blink_duration)
-        print(self.blink_frequency)
         return self.number_hmm_blinks
 
         

@@ -122,7 +122,6 @@ class GazeTracker:
 
 
     def plot_saccade_profile(self, name):
-        print("WHAT IS GOING ON")
         path = '../../data/gaze_outputs/' + name + "_velocity.csv"
 
         saccade_path = '../../data/event_detection/' + name + ".csv"
@@ -202,7 +201,6 @@ class GazeTracker:
                             current_gaze_length = current_gaze_length + 1
 
                         if (current_saccade_val == 2 or current_saccade_val == 3) and prev_saccade_value == 1:
-                            print("do we ever hit this 1")
                             gaze_length_rolling_list.append(current_gaze_length)
                             gaze_length_rolling_mean = statistics.mean(gaze_length_rolling_list)
                             current_gaze_length = 0
@@ -211,7 +209,6 @@ class GazeTracker:
                             current_saccade_length = current_saccade_length + 1
 
                         if (prev_saccade_value == 2 or prev_saccade_value ==3) and current_saccade_val == 1:
-                            print("do we ever hit this 2")
                             saccade_frequency_rolling_mean = saccade_frequency_rolling_mean + 1
 
                             saccade_length_rolling_list.append(current_saccade_length)
