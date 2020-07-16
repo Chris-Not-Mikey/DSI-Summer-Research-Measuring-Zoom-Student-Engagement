@@ -5,6 +5,17 @@ import seaborn as sns
 from hmmlearn.hmm import GaussianHMM
 import pickle
 import statistics
+import csv
+
+import tensorflow as tf
+from keras.datasets import imdb
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers.convolutional import Conv1D
+from keras.layers.convolutional import MaxPooling1D
+from keras.layers.embeddings import Embedding
+from keras.preprocessing import sequence
 
 class BlinkDetector:
     def __init__(self, eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list ):
@@ -18,6 +29,8 @@ class BlinkDetector:
         self.ear_avg_list = []
         self.blink_duration = []
         self.blink_frequency = []
+        self.blink_truth = []
+        self.blink_train_test = []
 
 
     def calculate_left_EAR(self):
@@ -67,6 +80,25 @@ class BlinkDetector:
         for i in temp_avg:
             EAR = (i[0] + i[1])/2
             self.ear_avg_list.append(EAR)
+
+    def write_EAR_to_CSV(self, name):
+        path = '../../data/blink_outputs/' + name + '_EAR.csv'
+        with open(path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+            counter = 0
+            csv_writer.writerow(["time", "EAR", "Blink"])
+            for i in self.ear_avg_list:
+                row = []
+                row.append(self.ear_independent_time[counter])
+                row.append(self.ear_avg_list[counter])
+                row.append(1)
+
+                csv_writer.writerow([row[0], row[1], row[2]])
+                counter = counter + 1
+
+        csvfile.close()
          
     #plot ear against time
     def plot_EAR_vs_time(self, name):
@@ -95,6 +127,51 @@ class BlinkDetector:
             for k in j:
                 if k < self.ear_threshold:
                     self.number_blinks = self.number_blinks + 1
+
+
+    # experimental: A possible better version for calculating blink
+    # rate that uses CNN instead of HMM. 
+    def cnn_predict_number_blinks(self, name, train):
+
+        cnn_filename = "../../data/cnn_blink_models/"
+        np.random.seed(7)
+        self.read_csv_file(name)
+   
+        X = np.array(self.blink_train_test, dtype=np.float32)
+        y = np.array(self.blink_truth, dtype=np.int64)
+
+        print(self.blink_train_test)
+        print(self.blink_truth)
+
+        X_train = X[783:]
+        y_train = y[783:]
+    
+        X_test = X[600:783]
+        y_test = y[600:783]
+
+   
+        # truncate and pad input sequences
+        max_review_length = 500
+        X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+        X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+
+        if train == True:
+            self.train_model(cnn_filename, X_train, y_train, max_review_length)
+
+        # load model
+        model = tf.keras.models.load_model(cnn_filename)
+
+        # Final evaluation of the model for training
+        if train == True:
+            scores = model.evaluate(X_test, y_test, verbose=0)
+            print("Accuracy: %.2f%%" % (scores[1]*100))
+
+        # Predictions made with non training model
+        else:
+            print("Printing Predicions")
+            self.raw_results = model.predict(X_test)
+            self.results = model.predict_classes(X_test)
+
 
 
     # A more advanced version for predicting the blink frequency and the blink
@@ -236,5 +313,39 @@ class BlinkDetector:
 
     def get_blinks(self):
         return self.number_hmm_blinks
+
+
+    def train_model(self, cnn_filename, X_train, y_train, max_review_length):
+
+        # MAKE A NEW MODEL
+        # create the model
+        top_words = 5000
+        embedding_vecor_length = 32
+        model = Sequential()
+        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
+        model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
+        model.add(MaxPooling1D(pool_size=2))
+        model.add(LSTM(100))
+        model.add(Dense(1, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        print(model.summary())
+        model.fit(X_train, y_train, epochs=3, batch_size=64)
+    
+        # save model
+        model.save(cnn_filename)
+
+
+    def read_csv_file(self, name):
+        path = '../../data/blink_outputs/' + name + '_EAR.csv'
+        with open(path) as s:
+            reader = csv.reader(s)
+
+            counter = 0
+            for row in reader:
+                if counter != 0:
+                    self.blink_truth.append([np.int64(row[2])])
+                    self.blink_train_test.append([np.float32(row[1])])
+
+                counter = counter + 1
 
         
