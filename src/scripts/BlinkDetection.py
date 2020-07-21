@@ -8,6 +8,7 @@ import statistics
 import csv
 
 import tensorflow as tf
+import keras
 from keras.datasets import imdb
 from keras.models import Sequential
 from keras.layers import Dense
@@ -99,6 +100,26 @@ class BlinkDetector:
                 counter = counter + 1
 
         csvfile.close()
+
+    def write_results_to_CSV(self, name):
+        path = '../../data/blink_outputs/' + name + '_blink_results.csv'
+        with open(path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+            counter = 0
+            csv_writer.writerow(["time", "EAR", "Blink"])
+            for i in self.results:
+                row = []
+                row.append(self.ear_independent_time[counter])
+                row.append(self.ear_avg_list[counter])
+                row.append(i)
+
+                csv_writer.writerow([row[0], row[1], row[2]])
+                counter = counter + 1
+
+        csvfile.close()
+
          
     #plot ear against time
     def plot_EAR_vs_time(self, name):
@@ -138,39 +159,62 @@ class BlinkDetector:
         self.read_csv_file(name)
    
         X = np.array(self.blink_train_test, dtype=np.float32)
-        y = np.array(self.blink_truth, dtype=np.int64)
+        y = np.array(self.blink_truth, dtype=np.float32)
 
-        print(self.blink_train_test)
-        print(self.blink_truth)
-
-        X_train = X[783:]
-        y_train = y[783:]
+        X_train = X[0:500]
+        y_train = y[0:500]
     
-        X_test = X[600:783]
-        y_test = y[600:783]
+        X_val = X[500:1000]
+        y_val = y[500:1000]
 
-   
+        X_test = X[1000:]
+        y_test = y[1000:]
+
         # truncate and pad input sequences
-        max_review_length = 500
-        X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
-        X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+        # max_review_length = 500
+        # X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+        # X_val = sequence.pad_sequences(X_val, maxlen=max_review_length)
+        # X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+
+        # y_train = sequence.pad_sequences(y_train, maxlen=max_review_length)
+        # y_val = sequence.pad_sequences(y_val, maxlen=max_review_length)
+        # y_test = sequence.pad_sequences(y_test, maxlen=max_review_length)
+
 
         if train == True:
-            self.train_model(cnn_filename, X_train, y_train, max_review_length)
+            #self.train_model(cnn_filename, X_train, y_train, X_val, y_val, X_test, y_test, max_review_length)
+            model = Sequential()
+            model.add(Dense(1, activation='sigmoid', input_dim=2))
+            opt = keras.optimizers.Adam(learning_rate=0.02)
+            model.compile(
+                optimizer=opt,
+                loss='binary_crossentropy',
+                metrics=['accuracy']
+            )
+            model.fit(X_train, y_train, epochs=10, batch_size=3)
 
-        # load model
-        model = tf.keras.models.load_model(cnn_filename)
+            self.results = model.predict_classes(X_test, batch_size=3, verbose=1)
+            print(self.results)
+            print(len(self.results))
+            print(len(self.results[0]))
 
-        # Final evaluation of the model for training
-        if train == True:
-            scores = model.evaluate(X_test, y_test, verbose=0)
-            print("Accuracy: %.2f%%" % (scores[1]*100))
+            # for i in self.results:
+            #     print(i)
+
+
 
         # Predictions made with non training model
         else:
+            # load model
+            model = tf.keras.models.load_model(cnn_filename, compile=True)
             print("Printing Predicions")
             self.raw_results = model.predict(X_test)
-            self.results = model.predict_classes(X_test)
+            print(self.raw_results)
+          
+            #self.results = np.argmax(self.raw_results, axis=1) # model.predict_classes(X_train)
+            self.results = (model.predict(X_test) > 0.5).astype("int32")
+            print(self.results)
+            self.write_results_to_CSV(name)
 
 
 
@@ -315,24 +359,14 @@ class BlinkDetector:
         return self.number_hmm_blinks
 
 
-    def train_model(self, cnn_filename, X_train, y_train, max_review_length):
+    def train_model(self, cnn_filename, X_train, y_train, X_val, y_val, X_test, y_test, max_review_length):
 
-        # MAKE A NEW MODEL
-        # create the model
-        top_words = 5000
-        embedding_vecor_length = 32
-        model = Sequential()
-        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
-        model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
-        model.add(MaxPooling1D(pool_size=2))
-        model.add(LSTM(100))
-        model.add(Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        print(model.summary())
-        model.fit(X_train, y_train, epochs=3, batch_size=64)
-    
-        # save model
-        model.save(cnn_filename)
+        estimator = KerasClassifier(build_fn=create_baseline, epochs=100, batch_size=5, verbose=0)
+        kfold = StratifiedKFold(n_splits=10, shuffle=True)
+        results = cross_val_score(estimator, X_train, y_train, cv=kfold)
+        print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+
+     
 
 
     def read_csv_file(self, name):
@@ -343,9 +377,18 @@ class BlinkDetector:
             counter = 0
             for row in reader:
                 if counter != 0:
-                    self.blink_truth.append([np.int64(row[2])])
-                    self.blink_train_test.append([np.float32(row[1])])
+                    self.blink_train_test.append([(np.float32(row[0]), np.float32(row[1]))])
+                    self.blink_truth.append([np.float32(row[2])])
+            
 
                 counter = counter + 1
 
-        
+
+def create_baseline():
+    # create model
+    model = Sequential()
+    model.add(Dense(1, input_dim=1, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    # Compile model
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    return model
