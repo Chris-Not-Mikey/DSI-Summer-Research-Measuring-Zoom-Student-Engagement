@@ -101,19 +101,19 @@ class BlinkDetector:
 
         csvfile.close()
 
-    def write_results_to_CSV(self, name):
+    def write_results_to_CSV(self, name, test_start):
         path = '../../data/blink_outputs/' + name + '_blink_results.csv'
         with open(path, 'w', newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
-            counter = 0
+            counter = test_start
             csv_writer.writerow(["time", "EAR", "Blink"])
             for i in self.results:
                 row = []
                 row.append(self.ear_independent_time[counter])
                 row.append(self.ear_avg_list[counter])
-                row.append(i)
+                row.append(i[0][0])
 
                 csv_writer.writerow([row[0], row[1], row[2]])
                 counter = counter + 1
@@ -161,14 +161,16 @@ class BlinkDetector:
         X = np.array(self.blink_train_test, dtype=np.float32)
         y = np.array(self.blink_truth, dtype=np.float32)
 
-        X_train = X[0:500]
-        y_train = y[0:500]
+        X_train = X[0:1000]
+        y_train = y[0:1000]
     
         X_val = X[500:1000]
         y_val = y[500:1000]
 
-        X_test = X[1000:]
-        y_test = y[1000:]
+
+        test_start = 30
+        X_test = X[test_start:]
+        y_test = y[test_start:]
 
         # truncate and pad input sequences
         # max_review_length = 500
@@ -185,18 +187,18 @@ class BlinkDetector:
             #self.train_model(cnn_filename, X_train, y_train, X_val, y_val, X_test, y_test, max_review_length)
             model = Sequential()
             model.add(Dense(1, activation='sigmoid', input_dim=2))
-            opt = keras.optimizers.Adam(learning_rate=0.02)
+            opt = keras.optimizers.Adam(learning_rate=0.01)
             model.compile(
                 optimizer=opt,
                 loss='binary_crossentropy',
                 metrics=['accuracy']
             )
-            model.fit(X_train, y_train, epochs=10, batch_size=3)
+            model.fit(X_train, y_train, epochs=300, batch_size=100)
+            model.save(cnn_filename)
 
-            self.results = model.predict_classes(X_test, batch_size=3, verbose=1)
-            print(self.results)
-            print(len(self.results))
-            print(len(self.results[0]))
+            self.results = model.predict_classes(X_test, batch_size=100, verbose=1)
+
+            self.write_results_to_CSV(name, test_start)
 
             # for i in self.results:
             #     print(i)
@@ -206,15 +208,11 @@ class BlinkDetector:
         # Predictions made with non training model
         else:
             # load model
-            model = tf.keras.models.load_model(cnn_filename, compile=True)
+            model = tf.keras.models.load_model(cnn_filename)
             print("Printing Predicions")
-            self.raw_results = model.predict(X_test)
-            print(self.raw_results)
+            self.results = model.predict_classes(X_test, batch_size=100, verbose=1)
           
-            #self.results = np.argmax(self.raw_results, axis=1) # model.predict_classes(X_train)
-            self.results = (model.predict(X_test) > 0.5).astype("int32")
-            print(self.results)
-            self.write_results_to_CSV(name)
+            self.write_results_to_CSV(name, test_start)
 
 
 
