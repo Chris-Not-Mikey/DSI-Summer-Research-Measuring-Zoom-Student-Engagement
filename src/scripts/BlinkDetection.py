@@ -18,6 +18,9 @@ from keras.layers.convolutional import MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 
+# This script is a class for predicting blink frequency and blink duration  
+# via a CNN model. This class allows for training and pre-trained prediction.
+
 class BlinkDetector:
     def __init__(self, eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list ):
         self.ear_threshold = 0.2
@@ -33,7 +36,7 @@ class BlinkDetector:
         self.blink_truth = []
         self.blink_train_test = []
 
-
+    # Calculate the eye aspect ratio (EAR) in the left eye
     def calculate_left_EAR(self):
         for i in self.eye_features_2D_list:
 
@@ -54,6 +57,7 @@ class BlinkDetector:
             self.ear_left_list.append(ear_left)
             self.ear_independent_time.append(float(i["timestamp"]))
 
+    # Calculate the eye aspect ratio (EAR) in the right eye
     def calculate_right_EAR(self):
         for i in self.eye_features_2D_list:
 
@@ -82,6 +86,7 @@ class BlinkDetector:
             EAR = (i[0] + i[1])/2
             self.ear_avg_list.append(EAR)
 
+    # Write the blink data (before prediction) to a csv file
     def write_EAR_to_CSV(self, name):
         path = '../../data/blink_outputs/' + name + '_EAR.csv'
         with open(path, 'w', newline='') as csvfile:
@@ -101,6 +106,7 @@ class BlinkDetector:
 
         csvfile.close()
 
+    # Write blink prediction data to a csv file
     def write_results_to_CSV(self, name, test_start):
         path = '../../data/blink_outputs/' + name + '_blink_results.csv'
         with open(path, 'w', newline='') as csvfile:
@@ -130,7 +136,7 @@ class BlinkDetector:
 
     # Thresholding is the simplest blink detection method
     # We will not use this for our feature data
-    # The HMM based apporach will be used instead
+    # The CNN based apporach will be used instead
     def threshold_predict_number_blinks(self):
 
         # Get local minimums from the EAR data recorded
@@ -150,8 +156,8 @@ class BlinkDetector:
                     self.number_blinks = self.number_blinks + 1
 
 
-    # experimental: A possible better version for calculating blink
-    # rate that uses CNN instead of HMM. 
+    # A more advanced prediction method other than thresholding and Markov models
+    # NOTE: Needs to be trained in order to be used
     def cnn_predict_number_blinks(self, name, train):
 
         cnn_filename = "../../data/cnn_blink_models/"
@@ -161,51 +167,22 @@ class BlinkDetector:
         X = np.array(self.blink_train_test, dtype=np.float32)
         y = np.array(self.blink_truth, dtype=np.float32)
 
-        X_train = X[0:1000]
-        y_train = y[0:1000]
+        X_train = X[0:test_start]
+        y_train = y[0:test_start]
     
-        X_val = X[500:1000]
-        y_val = y[500:1000]
 
-
-        test_start = 30
+        test_start = 0
         X_test = X[test_start:]
         y_test = y[test_start:]
 
-        # truncate and pad input sequences
-        # max_review_length = 500
-        # X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
-        # X_val = sequence.pad_sequences(X_val, maxlen=max_review_length)
-        # X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
 
-        # y_train = sequence.pad_sequences(y_train, maxlen=max_review_length)
-        # y_val = sequence.pad_sequences(y_val, maxlen=max_review_length)
-        # y_test = sequence.pad_sequences(y_test, maxlen=max_review_length)
-
-
+        # Train new model and save it
+        # NOTE: You may want to adjust the test_start value
         if train == True:
-            #self.train_model(cnn_filename, X_train, y_train, X_val, y_val, X_test, y_test, max_review_length)
-            model = Sequential()
-            model.add(Dense(1, activation='sigmoid', input_dim=2))
-            opt = keras.optimizers.Adam(learning_rate=0.01)
-            model.compile(
-                optimizer=opt,
-                loss='binary_crossentropy',
-                metrics=['accuracy']
-            )
-            model.fit(X_train, y_train, epochs=300, batch_size=100)
-            model.save(cnn_filename)
-
-            self.results = model.predict_classes(X_test, batch_size=100, verbose=1)
-
-            self.write_results_to_CSV(name, test_start)
-
-            # for i in self.results:
-            #     print(i)
+            self.train_model(name, test_start, cnn_filename, X_train, y_train, X_test, y_test):
 
 
-
-        # Predictions made with non training model
+        # Predictions made with pre-trained model
         else:
             # load model
             model = tf.keras.models.load_model(cnn_filename)
@@ -213,9 +190,11 @@ class BlinkDetector:
             self.results = model.predict_classes(X_test, batch_size=100, verbose=1)
           
             self.write_results_to_CSV(name, test_start)
+            self.get_blinks_from_cnn()
 
 
 
+    # DEPRECATED: Use CNN version instead. It is more accurate
     # A more advanced version for predicting the blink frequency and the blink
     # duration. Fare more accurate than simple thresholding.
     # Also, takes into account the duration of the blink, unlike thresholding.
@@ -294,7 +273,6 @@ class BlinkDetector:
         fig.savefig(filename)
         fig.clf()
 
-
         # temp variables for tracking blink duration and frequency
         blink_length = 0
         blink = False
@@ -303,7 +281,7 @@ class BlinkDetector:
         blink_frequency_rolling_mean = 0
         counter = 0
 
-        for i in hidden_states:
+        for i in g:
             if i == 0:
                 blink = True
                 blink_length = blink_length + 1
@@ -343,6 +321,53 @@ class BlinkDetector:
         return hidden_states, mus, sigmas, P, logProb, samples
 
 
+    # Get the number of blinks from the CNN model
+    def get_blinks_from_cnn(self):
+
+        # temp variables for tracking blink duration and frequency
+        blink_length = 0
+        blink = False
+        blink_duration_rolling_list = []
+        blink_duration_rolling_mean = 0
+        blink_frequency_rolling_mean = 0
+        counter = 0
+
+        for i in self.results:
+            if i[0][0] == 0:
+                blink = True
+                blink_length = blink_length + 1
+            
+
+            if i[0][0] == 1 and blink == True:
+                
+                # 2 and 21 correspond to 60ms and 700ms respectively (see 4.2.2 of Soukupova-TR-2016-05)
+                if blink_length >= 2 and blink_length <= 21:
+                    self.number_hmm_blinks = self.number_hmm_blinks + 1
+                    blink_frequency_rolling_mean = blink_frequency_rolling_mean + 1
+
+                    # divide by 30 fps to convert to seconds
+                    blink_duration_rolling_list.append(blink_length/30)
+                    blink_duration_rolling_mean = statistics.mean(blink_duration_rolling_list)
+                    
+                blink = False
+                blink_length = 0
+
+            # 900 refers to 900 frames, equivalent to 30 seconds.
+            if counter == 900:
+
+                self.blink_duration.append(blink_duration_rolling_mean)
+                self.blink_frequency.append(blink_frequency_rolling_mean)
+
+                # Clear for next rolling calculation
+                blink_duration_rolling_mean = 0
+                blink_duration_rolling_list = []
+                blink_frequency_rolling_mean = 0
+
+                # Reset counter. 
+                counter = 0
+
+            counter = counter + 1
+
     # Final Output for Engagement prediction (duration)
     def get_blink_duration(self):
         return self.blink_duration
@@ -353,20 +378,31 @@ class BlinkDetector:
         return self.blink_frequency
     
 
+    # Get total number of blinks in file
+    # Not super useful as a CNN feature, but can be useful for debugging
     def get_blinks(self):
         return self.number_hmm_blinks
 
 
-    def train_model(self, cnn_filename, X_train, y_train, X_val, y_val, X_test, y_test, max_review_length):
+    # Train the CNN model for blink detection
+    def train_model(self, name, test_start, cnn_filename, X_train, y_train, X_test, y_test):
 
-        estimator = KerasClassifier(build_fn=create_baseline, epochs=100, batch_size=5, verbose=0)
-        kfold = StratifiedKFold(n_splits=10, shuffle=True)
-        results = cross_val_score(estimator, X_train, y_train, cv=kfold)
-        print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+        model = Sequential()
+        model.add(Dense(1, activation='sigmoid', input_dim=2))
+        opt = keras.optimizers.Adam(learning_rate=0.01)
+        model.compile(
+            optimizer=opt,
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+        model.fit(X_train, y_train, epochs=300, batch_size=100)
+        model.save(cnn_filename)
+
+        self.results = model.predict_classes(X_test, batch_size=100, verbose=1)
+        self.write_results_to_CSV(name, test_start)
 
      
-
-
+    # Read the csv file that contains the EAR data for detecting blinks
     def read_csv_file(self, name):
         path = '../../data/blink_outputs/' + name + '_EAR.csv'
         with open(path) as s:
@@ -381,12 +417,3 @@ class BlinkDetector:
 
                 counter = counter + 1
 
-
-def create_baseline():
-    # create model
-    model = Sequential()
-    model.add(Dense(1, input_dim=1, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
-    # Compile model
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model

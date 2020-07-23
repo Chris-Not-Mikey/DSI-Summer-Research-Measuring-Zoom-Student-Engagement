@@ -11,6 +11,9 @@ import dlib
 import time
 import statistics
 
+# This class measures pupil size
+# It measures using both a pre-trained CNN and a simple
+# Landmark based calculation. Both are used as features
 
 class Pupillometer:
 

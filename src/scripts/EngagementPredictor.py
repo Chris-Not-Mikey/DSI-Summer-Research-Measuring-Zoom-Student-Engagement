@@ -18,6 +18,9 @@ from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 
 
+# This script is a class for predicting student engagement 
+# via a CNN model. This class allows for training and pre-trained prediction.
+
 class EngagementPredictor:
     def __init__(self, name ):
 
@@ -86,35 +89,38 @@ class EngagementPredictor:
                 counter = counter + 1
 
 
+    # Main CNN algo to predict student engagement
     def predict_engagement(self, train):
 
         cnn_filename = "../../data/cnn_models/"
         np.random.seed(7)
-   
+
         X = np.array(self.master_list, dtype=np.float32)
         y = np.array(self.engagement, dtype=np.int64)
 
-
         start = 0
+        if train == True:
+            start = len(X)/2
+
+        else:
+            start = 0
+
         X_train = X[0:start]
         y_train = y[0:start]
     
         X_test = X[start:]
         y_test = y[start:]
 
-   
-        # truncate and pad input sequences
-        # max_review_length = 500
-        # X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
-        # X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
-
+        # If train, we train and save a new model. This will overwrite an exsisting model
+        # NOTE: If you are going to train you might want to adjust (hardcode) the start variable
+        # The default is probably fine, but you can always adjust start
         if train == True:
             self.train_model(cnn_filename, X_train, y_train, X_test, y_test, start)
 
-        # load model
        
-        # Predictions made with non training model
+        # Predictions made with pre-trained model
         else:
+            # load model
             model = tf.keras.models.load_model(cnn_filename)
             print("Printing Predicions")
             self.raw_results = model.predict(X_test)
@@ -124,9 +130,10 @@ class EngagementPredictor:
             print(self.results)
 
 
-
+    # CNN training
     def train_model(self, cnn_filename, X_train, y_train, X_test, y_test, start):
 
+        # Create, train, compile and save model
         model = Sequential()
         model.add(Dense(1, activation='sigmoid', input_dim=7))
         opt = keras.optimizers.Adam(learning_rate=0.01)
@@ -140,13 +147,11 @@ class EngagementPredictor:
         # save model
         model.save(cnn_filename)
 
-        #scores = model.evaluate(X_test, y_test, verbose=0)
         self.results = model.predict_classes(X_test)
         self.write_results_to_csv(start)
-        #print("Accuracy: %.2f%%" % (scores[1]*100))
-        print(self.results)
 
 
+    # Determine if final output is Engaged or not
     def determine_results(self):
 
         engaged = 0
@@ -163,6 +168,7 @@ class EngagementPredictor:
             print("Student was not engaged")
 
 
+    # Write engagement predictions to a csv file
     def write_results_to_csv(self, start):
         path = '../../data/engagement_features/' + self.name + '_engagement_RESULTS.csv'
         with open(path, 'w', newline='') as csvfile:
@@ -192,6 +198,8 @@ class EngagementPredictor:
         csvfile.close()
 
 
+    # Plot the results of student engagement against time
+    # This is just for visulation
     def plot_results(self, name):
 
         Y = []

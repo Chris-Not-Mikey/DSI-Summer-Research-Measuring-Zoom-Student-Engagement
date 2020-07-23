@@ -8,6 +8,11 @@ import csv
 import statistics
 import copy
 
+# This class runs the gaze tracking algo and the event detection algo
+# The gaze tracking will parse importan ocular data form the videos
+# The event detection will be used to classify saccades and gazes. 
+# NOTE: For best results, Event Detection will need to be trained
+
 class GazeTracker:
     def __init__(self, gaze_angle_x, gaze_angle_y, gaze_features_2D_list):
         self.confidence_threshold = 0.98
@@ -51,14 +56,9 @@ class GazeTracker:
         src = 'etdata/openFaceGeneratedData_irf/i2mc/' + name + '_i2mc_raw.mat'
         dst = 'etdata/openFaceGeneratedData_irf/i2mc/' + name + '_i2mc.mat'
 
-        #if os.path.exists(src):
-        # concert raw to normal
-        #os.rename(src, dst)
         os.chdir("./util_lib/I2MC-Dev/")
         subprocess.call(['matlab', '-nodesktop', '-nosplash', '-r', 'I2MC_rz; exit;'])
         os.chdir("../../")
-
-
 
         # run again if this is the first run with a given media file
         # this looks strange, but this is the expected behavior for the irf script.
@@ -91,8 +91,6 @@ class GazeTracker:
         counter = 0
         for i in self.gaze_features_2D_list:
 
-           
-
             x_radians = float(i["gaze_angle_x"])
             y_radians = float(i["gaze_angle_y"])
             time = i["timestamp"]
@@ -103,11 +101,9 @@ class GazeTracker:
             conversion = np.array([(np.float64(time), np.float32(x_degrees),np.float32(y_degrees),np.bool(False), np.uint8(0))]
             , dtype=self.dtype)
 
-        
             self.irf_format = np.append(self.irf_format, conversion)
 
-        
-
+    
         np.delete(self.irf_format, 0)
         print(self.irf_format)
 
@@ -121,7 +117,9 @@ class GazeTracker:
         os.rename(src, dst)
 
 
-    def plot_saccade_profile(self, name):
+    # Get important data from event detection output like
+    # Saccade Velocity, Saccade Length, Saccade Frequency, and gaze length
+    def parse_event_data(self, name):
         path = '../../data/gaze_outputs/' + name + "_velocity.csv"
 
         saccade_path = '../../data/event_detection/' + name + ".csv"
@@ -134,11 +132,9 @@ class GazeTracker:
         # And proactively account of index offsets as we loop
         counter = 0 
 
-
         #saccade velocity rolling mean variables
         saccade_velocity_rolling_mean = 0
         saccade_velocity_rolling_list = []
-
 
         # 1 = gaze
         # 2 = saccade
@@ -193,7 +189,6 @@ class GazeTracker:
                     if skip_row == False:
         
 
-                        
                         current_saccade_val = int(row[5])
                      
 
