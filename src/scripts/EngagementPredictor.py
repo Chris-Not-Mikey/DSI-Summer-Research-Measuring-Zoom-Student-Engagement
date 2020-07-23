@@ -7,6 +7,7 @@ import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import keras
 from keras.datasets import imdb
 from keras.models import Sequential
 from keras.layers import Dense
@@ -93,55 +94,57 @@ class EngagementPredictor:
         X = np.array(self.master_list, dtype=np.float32)
         y = np.array(self.engagement, dtype=np.int64)
 
-        X_train = X[0:3]
-        y_train = y[0:3]
+
+        start = 0
+        X_train = X[0:start]
+        y_train = y[0:start]
     
-        X_test = X[:]
-        y_test = y[:]
+        X_test = X[start:]
+        y_test = y[start:]
 
    
         # truncate and pad input sequences
-        max_review_length = 500
-        X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
-        X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
+        # max_review_length = 500
+        # X_train = sequence.pad_sequences(X_train, maxlen=max_review_length)
+        # X_test = sequence.pad_sequences(X_test, maxlen=max_review_length)
 
         if train == True:
-            self.train_model(cnn_filename, X_train, y_train, max_review_length)
+            self.train_model(cnn_filename, X_train, y_train, X_test, y_test, start)
 
         # load model
-        model = tf.keras.models.load_model(cnn_filename)
-
-        # Final evaluation of the model for training
-        if train == True:
-            scores = model.evaluate(X_test, y_test, verbose=0)
-            print("Accuracy: %.2f%%" % (scores[1]*100))
-
+       
         # Predictions made with non training model
         else:
+            model = tf.keras.models.load_model(cnn_filename)
             print("Printing Predicions")
             self.raw_results = model.predict(X_test)
             self.results = model.predict_classes(X_test)
+            self.determine_results()
+            self.write_results_to_csv(start)
+            print(self.results)
 
 
 
-    def train_model(self, cnn_filename, X_train, y_train, max_review_length):
+    def train_model(self, cnn_filename, X_train, y_train, X_test, y_test, start):
 
-        # MAKE A NEW MODEL
-        # create the model
-        top_words = 5000
-        embedding_vecor_length = 32
         model = Sequential()
-        model.add(Embedding(top_words, embedding_vecor_length, input_length=max_review_length))
-        model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
-        model.add(MaxPooling1D(pool_size=2))
-        model.add(LSTM(100))
-        model.add(Dense(1, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        print(model.summary())
-        model.fit(X_train, y_train, epochs=3, batch_size=64)
+        model.add(Dense(1, activation='sigmoid', input_dim=7))
+        opt = keras.optimizers.Adam(learning_rate=0.01)
+        model.compile(
+            optimizer=opt,
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+        model.fit(X_train, y_train, epochs=20, batch_size=1)
     
         # save model
         model.save(cnn_filename)
+
+        #scores = model.evaluate(X_test, y_test, verbose=0)
+        self.results = model.predict_classes(X_test)
+        self.write_results_to_csv(start)
+        #print("Accuracy: %.2f%%" % (scores[1]*100))
+        print(self.results)
 
 
     def determine_results(self):
@@ -158,6 +161,35 @@ class EngagementPredictor:
             print("Student Was engaged")
         else:
             print("Student was not engaged")
+
+
+    def write_results_to_csv(self, start):
+        path = '../../data/engagement_features/' + self.name + '_engagement_RESULTS.csv'
+        with open(path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+            counter = start
+            csv_writer.writerow(["Row", "GL", "SF", "SL", "SV", "BF", "BD", "PS", "PSS", "ENG"])
+            for i in self.results:
+                engagement_features = []
+
+                engagement_features.append(self.gaze_length[counter])
+                engagement_features.append(self.saccade_frequency[counter])
+                engagement_features.append(self.saccade_length[counter])
+                engagement_features.append(self.saccade_velocity[counter])
+                engagement_features.append(self.blink_rate[counter])
+                engagement_features.append(self.blink_duration[counter])
+                engagement_features.append(self.pupil_size[counter])
+                engagement_features.append(self.pupil_size_simple[counter])
+
+                # 0 = not engaged
+                # 1 = engaged
+                csv_writer.writerow([counter, engagement_features[0], engagement_features[1],
+                engagement_features[2], engagement_features[3], engagement_features[4], engagement_features[5], engagement_features[6], engagement_features[7], i[0]])
+
+                counter = counter + 1
+        csvfile.close()
 
 
     def plot_results(self, name):
