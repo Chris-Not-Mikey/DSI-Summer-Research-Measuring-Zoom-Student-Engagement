@@ -255,7 +255,7 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
 if __name__ == "__main__":
 
     # Video files to parse and determine engagement
-    files = ["e_test_2"]
+    files = ["glasses_test_1"]
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     # From this data, we average it in periods of 30 seconds

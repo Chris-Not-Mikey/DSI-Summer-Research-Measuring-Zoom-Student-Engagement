@@ -167,11 +167,10 @@ class BlinkDetector:
         X = np.array(self.blink_train_test, dtype=np.float32)
         y = np.array(self.blink_truth, dtype=np.float32)
 
+        test_start = 0
         X_train = X[0:test_start]
         y_train = y[0:test_start]
     
-
-        test_start = 0
         X_test = X[test_start:]
         y_test = y[test_start:]
 
@@ -179,7 +178,7 @@ class BlinkDetector:
         # Train new model and save it
         # NOTE: You may want to adjust the test_start value
         if train == True:
-            self.train_model(name, test_start, cnn_filename, X_train, y_train, X_test, y_test):
+            self.train_model(name, test_start, cnn_filename, X_train, y_train, X_test, y_test)
 
 
         # Predictions made with pre-trained model
