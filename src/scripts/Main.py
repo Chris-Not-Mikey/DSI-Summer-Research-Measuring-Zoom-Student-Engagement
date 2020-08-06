@@ -264,7 +264,7 @@ def read_main_csv_file():
         for row in reader:
             if counter != 0:
                 files.append(row[1])
-                engagment.append(row[2])
+                engagement.append(row[2])
 
             counter = counter + 1
 
@@ -283,90 +283,111 @@ if __name__ == "__main__":
     # From this data, we average it in periods of 30 seconds
     # Then using these averages (which are written to a CSV file) we use a CNN to predict student engagement
     for name in files:
+        print("Temp Disabled")
+        # # Use the OpenFace precompiled Binaries to start gaze tracking
+        # gaze_tracker = GazeTracker(gaze_angle_x, gaze_angle_y, gaze_features_2D_list)
+        # gaze_tracker.change_to_open_face_dir() 
 
-        # Use the OpenFace precompiled Binaries to start gaze tracking
-        gaze_tracker = GazeTracker(gaze_angle_x, gaze_angle_y, gaze_features_2D_list)
-        gaze_tracker.change_to_open_face_dir() 
+        # # Track gaze with the OpenFace precompiled binaries.
+        # # This will generate a CSV file based on the gaze data from a video. 
+        # gaze_tracker.track_gaze(name) 
 
-        # Track gaze with the OpenFace precompiled binaries.
-        # This will generate a CSV file based on the gaze data from a video. 
-        gaze_tracker.track_gaze(name) 
+        # # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
+        # read_csv_file('../../data/gaze_outputs/' + name + '.csv')
 
-        # Read the CSV file generated from track_gaze(). This contains Eye Gaze data, as well as facial landmarks
-        read_csv_file('../../data/gaze_outputs/' + name + '.csv')
+        # # Convert to irf format needed for event detection (gaze/saccade detection) algorithm
+        # gaze_tracker.convert_to_irf_data_structure(name)
+        # gaze_tracker.change_to_fixation_saccade_dir()
+        # gaze_tracker.event_detection(name)
+        # gaze_tracker.move_output_csv(name)
+        # return_to_main_directory()
+        # gaze_tracker.change_to_open_face_dir()
+        # gaze_tracker.parse_event_data(name)
 
-        # Convert to irf format needed for event detection (gaze/saccade detection) algorithm
-        gaze_tracker.convert_to_irf_data_structure(name)
-        gaze_tracker.change_to_fixation_saccade_dir()
-        gaze_tracker.event_detection(name)
-        gaze_tracker.move_output_csv(name)
-        return_to_main_directory()
-        gaze_tracker.change_to_open_face_dir()
-        gaze_tracker.parse_event_data(name)
-
-        # Detect blinks in the footage
-        # We will record both blink frequency and blink duration.
-        # NOTE: This CNN approach NEEDS to be trained.
-        detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list)
-        detector.calculate_left_EAR()
-        detector.calculate_right_EAR()
-        detector.calculate_avg_EAR()
-        detector.plot_EAR_vs_time(name)
-        detector.threshold_predict_number_blinks()
-        detector.write_EAR_to_CSV(name)
-        # to train blink detector, set blink_train to True
-        blink_train = False
-        detector.cnn_predict_number_blinks(name, blink_train)
+        # # Detect blinks in the footage
+        # # We will record both blink frequency and blink duration.
+        # # NOTE: This CNN approach NEEDS to be trained.
+        # detector = BlinkDetector(eye_features_2D_list, ear_independent_time, ear_left_list, ear_right_list)
+        # detector.calculate_left_EAR()
+        # detector.calculate_right_EAR()
+        # detector.calculate_avg_EAR()
+        # detector.plot_EAR_vs_time(name)
+        # detector.threshold_predict_number_blinks()
+        # detector.write_EAR_to_CSV(name)
+        # # to train blink detector, set blink_train to True
+        # blink_train = False
+        # detector.cnn_predict_number_blinks(name, blink_train)
     
-        # Measure Pupil Size
-        # We use two methods:
-        # Advanced which is a deep learning measurement
-        # Simple, which uses the openface landmarks to calculate pupil size
-        pupillometer = Pupillometer(pupil_features_2D_list)
-        pupillometer.change_to_pupil_locater_dir()
-        pupillometer.crop_video_to_roi(name)
-        # Measure Pupil size (diameter) 
-        pupillometer.pupil_locater() 
-        # Write ouput to a csv file
-        pupillometer.read_pupil_csv_file("pupil_diameter.csv")
-        pupillometer.plot_advanced_diameter_vs_time(name)
-        pupillometer.calc_simple_pupil_diameter()
-        pupillometer.plot_simple_diameter_vs_time(name)
+        # # Measure Pupil Size
+        # # We use two methods:
+        # # Advanced which is a deep learning measurement
+        # # Simple, which uses the openface landmarks to calculate pupil size
+        # pupillometer = Pupillometer(pupil_features_2D_list)
+        # pupillometer.change_to_pupil_locater_dir()
+        # pupillometer.crop_video_to_roi(name)
+        # # Measure Pupil size (diameter) 
+        # pupillometer.pupil_locater() 
+        # # Write ouput to a csv file
+        # pupillometer.read_pupil_csv_file("pupil_diameter.csv")
+        # pupillometer.plot_advanced_diameter_vs_time(name)
+        # pupillometer.calc_simple_pupil_diameter()
+        # pupillometer.plot_simple_diameter_vs_time(name)
         
-        # Clear data accumlated. 
-        # If this is not done, there will be some leftover data that WILL affect computation
-        eye_features_2D_list.clear()
-        ear_independent_time.clear()
-        pupil_features_2D_list.clear()
-        gaze_features_2D_list.clear()
-        ear_left_list.clear()  
-        ear_right_list.clear()
+        # # Clear data accumlated. 
+        # # If this is not done, there will be some leftover data that WILL affect computation
+        # eye_features_2D_list.clear()
+        # ear_independent_time.clear()
+        # pupil_features_2D_list.clear()
+        # gaze_features_2D_list.clear()
+        # ear_left_list.clear()  
+        # ear_right_list.clear()
 
-        # Go back to main path
-        return_to_main_directory()
+        # # Go back to main path
+        # return_to_main_directory()
 
-        # Now that we have parsed  all the data we want from the video files, we will put all this data
-        # Into a csv file.
-        write_results_to_csv(name, gaze_tracker, detector, pupillometer)
+        # # Now that we have parsed  all the data we want from the video files, we will put all this data
+        # # Into a csv file.
+        # write_results_to_csv(name, gaze_tracker, detector, pupillometer)
 
-        # make final predictions based on collected data in csv file
-        predictor = EngagementPredictor(name)
-        predictor.read_csv_file()
-        # To train, set this value to True
-        train = False 
-        predictor.predict_engagement(train)
-        #predictor.predict_engagement_better(train)
-        predictor.plot_results(name)
+        # # make final predictions based on collected data in csv file
+        # predictor = EngagementPredictor(name)
+        # predictor.read_csv_file(name)
+        # # To train, set this value to True
 
-        #store all the predictor objects in a list
-        predictor_list.append(predictor)
+        # # Deprecated
+        # # train = False 
+        # # predictor.predict_engagement(train)
+        # # #predictor.predict_engagement_better(train)
+        # # predictor.plot_results(name)
 
+        # #store all the predictor objects in a list
+        # predictor_list.append(predictor)
+
+
+
+
+
+    predictor_temp = EngagementPredictor("saccade_test_7")
+    predictor_temp.read_csv_file("saccade_test_7")
+    predictor_list.append(predictor_temp)
+
+    predictor_temp_2 = EngagementPredictor("e_test_2")
+    predictor_temp_2.read_csv_file("e_test_2")
+    predictor_list.append(predictor_temp_2)
+
+    predictor_temp_3 = EngagementPredictor("glasses_test_1")
+    predictor_temp_3.read_csv_file("glasses_test_1")
+    predictor_list.append(predictor_temp_3)
+
+    predictor_temp_4 = EngagementPredictor("e_test_1")
+    predictor_temp_4.read_csv_file("e_test_1")
+    predictor_list.append(predictor_temp_4)
 
 
     # Once we are done reading the files, make final (better) predictions
 
     b_predictor = BinaryPredictor(files, engagement,  predictor_list)
-
+    b_predictor.predict_engagement(predictor_list)
 
     print("#########################################")
     print("#########Computation Complete############")
