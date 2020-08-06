@@ -16,85 +16,43 @@ from keras.layers.convolutional import Conv1D
 from keras.layers.convolutional import MaxPooling1D
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
+from EngagementPredictor import EngagementPredictor
 
 
 # This script is a class for predicting student engagement 
 # via a CNN model. This class allows for training and pre-trained prediction.
 
-class EngagementPredictor:
-    def __init__(self, name ):
+class BinaryPredictor:
+    def __init__(self, names, engagement, predictor_list ):
 
-        self.name = name
-        self.gaze_length = []
-        self.saccade_frequency = []
-        self.saccade_length = []
-        self.saccade_velocity = []
-        self.blink_rate = []
-        self.blink_duration = []
-        self.pupil_size = []
-        self.pupil_size_simple = []
+        self.name = names
+        self.engagement_known = engagement
+        self.predict_list = predictor_list
         self.master_list = []
         self.complete_list = []
         self.engagement = []
         self.results = []
         self.raw_results = []
 
-    
-    # Rads the CSV file that is created with all the ocular measurements
-    # Each measurment is taken at a 30 seconds timestamp
-    def read_csv_file(self):
-        path = '../../data/engagement_features/' + self.name + '_engagement.csv'
-        with open(path) as s:
-            reader = csv.reader(s)
-
-            counter = 0
-            for row in reader:
-                if counter != 0:
-                    self.gaze_length.append(np.float32(row[1]))
-                    self.saccade_frequency.append(np.float32(row[2]))
-                    self.saccade_length.append(np.float32(row[3]))
-                    self.saccade_velocity.append(np.float32(row[4]))
-                    self.blink_rate.append(np.float32(row[5]))
-                    self.blink_duration.append(np.float32(row[6]))
-                    self.pupil_size.append(np.float32(row[7]))
-                    self.pupil_size_simple.append(np.float32(row[8]))
-
-                    engagement_element = np.int64(row[9])
-                    self.engagement.append(engagement_element)
-       
-                    element = []
-
-                    element_1 = float(row[1])
-                    element_2 = float(row[2])
-                    element_3 = float(row[3])
-                    element_4 = float(row[4])
-                    element_5 = float(row[5])
-                    element_6 = float(row[6])
-                    element_7 = float(row[7])
-
-                    element.append(element_1)
-                    element.append(element_2)
-                    element.append(element_3)
-                    element.append(element_4)
-                    element.append(element_5)
-                    element.append(element_6)
-                    element.append(element_7)
-                    
-                    element_np = np.array(element, dtype=np.float32)
-                    self.master_list.append(element_np)
-
-                counter = counter + 1
 
 
-
-        # Main CNN algo to predict student engagement
-    def predict_engagement_better(self, train):
+    # Main CNN algo to predict student engagement
+    def predict_engagement(self, predictor_list):
 
         cnn_filename = "../../data/cnn_better_model/"
         np.random.seed(7)
 
-        X = np.array(self.master_list, dtype=np.float32)
-        y = np.array(self.engagement, dtype=np.int64)
+
+        core_list = []
+        for i in predictor_list:
+            core_list.append(i.get_master_list())
+
+
+        if len(core_list) != len(self.engagement_known):
+            print("WARNING! The lengths are NOT the same. Major issue")
+
+        X = np.array(core_list, dtype=np.float32)
+        y = np.array(self.engagement_known, dtype=np.int64)
 
         start = 0
         if train == True:
@@ -237,9 +195,6 @@ class EngagementPredictor:
                 counter = counter + 1
         csvfile.close()
 
-
-    def get_master_list(self):
-        return self.master_list
 
     # Plot the results of student engagement against time
     # This is just for visulation

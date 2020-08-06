@@ -11,6 +11,7 @@ from BlinkDetection import BlinkDetector
 from GazeTracking import GazeTracker
 from Pupillometry import Pupillometer
 from EngagementPredictor import EngagementPredictor
+from BinaryPredictor import BinaryPredictor
 
 
 # This script is the main workhorse for determing student engagement.
@@ -251,11 +252,32 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
     csvfile.close()
 
 
+def read_main_csv_file():
+    path = '../../data/main_csv/master.csv'
+
+    files = []
+    engagement = []
+    with open(path) as s:
+        reader = csv.reader(s)
+
+        counter = 0
+        for row in reader:
+            if counter != 0:
+                files.append(row[1])
+                engagment.append(row[2])
+
+            counter = counter + 1
+
+    return files, engagement
+
 # The heart of the algorithm (aka main function)
 if __name__ == "__main__":
 
     # Video files to parse and determine engagement
-    files = ["glasses_test_1"]
+
+    files, engagement = read_main_csv_file()
+    #files = ["glasses_test_1"]
+    predictor_list = []
  
     # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
     # From this data, we average it in periods of 30 seconds
@@ -333,7 +355,17 @@ if __name__ == "__main__":
         # To train, set this value to True
         train = False 
         predictor.predict_engagement(train)
+        #predictor.predict_engagement_better(train)
         predictor.plot_results(name)
+
+        #store all the predictor objects in a list
+        predictor_list.append(predictor)
+
+
+
+    # Once we are done reading the files, make final (better) predictions
+
+    b_predictor = BinaryPredictor(files, engagement,  predictor_list)
 
 
     print("#########################################")
