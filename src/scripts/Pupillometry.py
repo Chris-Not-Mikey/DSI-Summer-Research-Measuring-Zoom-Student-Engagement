@@ -24,37 +24,64 @@ class Pupillometer:
         self.time_stamp = []
         self.pupil_diameter = []
         self.pupil_size = []
+        self.relative_pupil_size = []
         self.pupil_simple_size = []
+        self.relative_simple_pupil_size = []
+        self.pupil_baseline = 0
+        self.pupil_simple_baseline = 0
 
 
-    # Use OpenFace face landmark features to determine radius
+    # Use OpenFace face landmark features to determine diameter
     # This will be less accurate than the results provided by
     # the pupil locater
     def calc_simple_pupil_diameter(self):
+        trial_number = 0
+        counter = 0
+        rolling_simple_pupil_mean = 0
+        rolling_simple_pupil_size = []
         for i in self.pupil_features_2D_list:
 
             x_21_1 = (float(i["eye_lmk_x_25"]) - float(i["eye_lmk_x_21"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_25"]) - float(i["eye_lmk_y_21"])) ** 2
-            radius_1 = (np.sqrt((x_21_1 + y_21_1)))
+            diameter_1 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_26"]) - float(i["eye_lmk_x_22"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_26"]) - float(i["eye_lmk_y_22"])) ** 2
-            radius_2 = (np.sqrt((x_21_1 + y_21_1)))
+            diameter_2 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_27"]) - float(i["eye_lmk_x_23"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_27"]) - float(i["eye_lmk_y_23"])) ** 2
-            radius_3 = (np.sqrt((x_21_1 + y_21_1)))
+            diameter_3 = (np.sqrt((x_21_1 + y_21_1)))
 
             x_21_1 = (float(i["eye_lmk_x_20"]) - float(i["eye_lmk_x_24"])) ** 2
             y_21_1 = (float(i["eye_lmk_y_20"]) - float(i["eye_lmk_y_24"])) ** 2
-            radius_4 = (np.sqrt((x_21_1 + y_21_1)))
+            diameter_4 = (np.sqrt((x_21_1 + y_21_1)))
 
             
-            radius = np.average([radius_1, radius_2, radius_3, radius_4])
-
-            self.pupil_radius_left_list.append(radius)
+            diameter = np.average([diameter_1, diameter_2, diameter_3, diameter_4])
+          
+            self.pupil_radius_left_list.append(diameter)
             self.pupil_independent_time.append(float(i["timestamp"]))
-            self.pupil_simple_size.append(radius)
+            rolling_simple_pupil_size.append(diameter)
+
+            if counter == 900:
+                pupil_size_rolling_mean = statistics.mean(rolling_simple_pupil_size)
+
+                if trial_number == 0:
+                    self.pupil_simple_baseline = diameter
+
+                numerator = abs(pupil_size_rolling_mean - self.pupil_simple_baseline)
+                denominator = abs((pupil_size_rolling_mean + self.pupil_simple_baseline)/2)
+                percent_diff = (numerator/denominator) * 100
+        
+            
+                self.pupil_simple_size.append(pupil_size_rolling_mean)
+                self.relative_simple_pupil_size.append(percent_diff)
+                trial_number = trial_number + 1
+                rolling_simple_pupil_size = []
+                counter = 0
+                
+            counter = counter + 1
 
 
 
@@ -179,6 +206,7 @@ class Pupillometer:
     def read_pupil_csv_file(self, filename):
 
         # variables for pupil diameter rolling mean
+        trial_number = 0
         pupil_size_rolling_mean = 0
         pupil_size_rolling_list = []
 
@@ -212,12 +240,23 @@ class Pupillometer:
                     # add pupil size
                     self.pupil_size.append(pupil_size_rolling_mean)
 
+                    if trial_number == 0:
+                        self.pupil_baseline = pupil_size_rolling_mean
+
+
+                    numerator = abs(pupil_size_rolling_mean - self.pupil_baseline)
+                    denominator = abs((pupil_size_rolling_mean + self.pupil_baseline)/2)
+                    percent_diff = (numerator/denominator) * 100
+                    self.relative_pupil_size.append(percent_diff)
+
                     # clear for next rolling mean
                     pupil_size_rolling_mean = 0
                     pupil_size_rolling_list = []
                     row_counter = 0
+                    trial_number = trial_number + 1
 
                 row_counter = row_counter + 1
+         
 
 
 
@@ -225,9 +264,17 @@ class Pupillometer:
     def get_pupil_size(self):
         return self.pupil_size
 
+    # Final Relative Output for Engagement prediction (pupil size)
+    def get_relative_pupil_size(self):
+        return self.relative_pupil_size
+
     # Final Output for Engagement prediction (pupil size)
     def get_simple_pupil_size(self):
         return self.pupil_simple_size
+
+    # Final Output for Engagement prediction (pupil size)
+    def get_relative_simple_pupil_size(self):
+        return self.relative_simple_pupil_size
     
 
 

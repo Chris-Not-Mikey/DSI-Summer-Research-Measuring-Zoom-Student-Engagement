@@ -240,8 +240,8 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
             engagement_features.append(gaze_tracker.get_saccade_velocity()[counter])
             engagement_features.append(detector.get_blink_frequency()[counter])
             engagement_features.append(detector.get_blink_duration()[counter])
-            engagement_features.append(pupillometer.get_pupil_size()[counter])
-            engagement_features.append(pupillometer.get_simple_pupil_size()[counter])
+            engagement_features.append(pupillometer.get_relative_pupil_size()[counter])
+            engagement_features.append(pupillometer.get_relative_simple_pupil_size[counter])
 
             # 0 = not engaged (default)
             # 1 = engaged
@@ -278,15 +278,16 @@ if __name__ == "__main__":
     files, engagement = read_main_csv_file()
     #files = ["glasses_test_1"]
     predictor_list = []
+    files = ["b_test_5"]
  
-    parse_videos = False:
-    if parse_videos == True
+    parse_videos = True
+    if parse_videos == True:
         # For each file (video of a person's/people's face(s)) we do eye tracking, blink detection, and pupilometry
         # From this data, we average it in periods of 30 seconds
         # Then using these averages (which are written to a CSV file) we use a CNN to predict student engagement
         for name in files:
     
-            Use the OpenFace precompiled Binaries to start gaze tracking
+            #Use the OpenFace precompiled Binaries to start gaze tracking
             gaze_tracker = GazeTracker(gaze_angle_x, gaze_angle_y, gaze_features_2D_list)
             gaze_tracker.change_to_open_face_dir() 
 
@@ -333,7 +334,14 @@ if __name__ == "__main__":
             pupillometer.read_pupil_csv_file("pupil_diameter.csv")
             pupillometer.plot_advanced_diameter_vs_time(name)
             pupillometer.calc_simple_pupil_diameter()
-            pupillometer.plot_simple_diameter_vs_time(name)
+            #pupillometer.plot_simple_diameter_vs_time(name)
+            list_1 = pupillometer.get_relative_pupil_size()
+            print(list_1)
+            list_2 = pupillometer.get_relative_simple_pupil_size()
+            print(list_2)
+            print("List lengths:")
+            print(len(list_1))
+            print(len(list_2))
             
             # Clear data accumlated. 
             # If this is not done, there will be some leftover data that WILL affect computation
@@ -354,13 +362,13 @@ if __name__ == "__main__":
     
 
     # Once we are done reading the files, make final (better) predictions
-    for i in files:
-        predictor = EngagementPredictor(i)
-        predictor.read_csv_file(i)
-        predictor_list.append(predictor)
+    # for i in files:
+    #     predictor = EngagementPredictor(i)
+    #     predictor.read_csv_file(i)
+    #     predictor_list.append(predictor)
 
-    b_predictor = BinaryPredictor(files, engagement,  predictor_list)
-    b_predictor.predict_engagement(predictor_list)
+    # b_predictor = BinaryPredictor(files, engagement,  predictor_list)
+    # b_predictor.predict_engagement(predictor_list)
 
     print("#########################################")
     print("#########Computation Complete############")
