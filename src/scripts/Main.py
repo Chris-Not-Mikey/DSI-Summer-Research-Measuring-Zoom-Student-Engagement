@@ -9,7 +9,7 @@ import subprocess
 import copy
 from BlinkDetection import BlinkDetector
 from GazeTracking import GazeTracker
-from Pupillometry import Pupillometer
+from Pupillometry import Pupillometer, PupillometerPCA
 from EngagementPredictor import EngagementPredictor
 from BinaryPredictor import BinaryPredictor
 
@@ -241,7 +241,7 @@ def write_results_to_csv(name, gaze_tracker, detector, pupillometer):
             engagement_features.append(detector.get_blink_frequency()[counter])
             engagement_features.append(detector.get_blink_duration()[counter])
             engagement_features.append(pupillometer.get_relative_pupil_size()[counter])
-            engagement_features.append(pupillometer.get_relative_simple_pupil_size[counter])
+            engagement_features.append(pupillometer.get_relative_simple_pupil_size()[counter])
 
             # 0 = not engaged (default)
             # 1 = engaged
@@ -278,7 +278,10 @@ if __name__ == "__main__":
     files, engagement = read_main_csv_file()
     #files = ["glasses_test_1"]
     predictor_list = []
-    files = ["b_test_5"]
+
+    pupillometer_baseline_list = []
+    pupillometer_full_list = []
+    files = ["b_test_1"]
  
     parse_videos = True
     if parse_videos == True:
@@ -306,6 +309,9 @@ if __name__ == "__main__":
             return_to_main_directory()
             gaze_tracker.change_to_open_face_dir()
             gaze_tracker.parse_event_data(name)
+            gaze_tracker.determine_large_amplitude_saccade(name)
+            print("NEW:")
+            print(gaze_tracker.get_large_amplitude_saccade_rate())
 
             # Detect blinks in the footage
             # We will record both blink frequency and blink duration.
@@ -342,6 +348,9 @@ if __name__ == "__main__":
             print("List lengths:")
             print(len(list_1))
             print(len(list_2))
+
+            # pupillometer_full_list.append(pupillometer.get_pupil_size())
+            # pupillometer_baseline_list.append(pupillometer.get_base_line_pupil_size())
             
             # Clear data accumlated. 
             # If this is not done, there will be some leftover data that WILL affect computation
@@ -360,6 +369,11 @@ if __name__ == "__main__":
             write_results_to_csv(name, gaze_tracker, detector, pupillometer)
 
     
+
+    # pca = PupillometerPCA(pupillometer_full_list, pupillometer_baseline_list )
+    # pca.calculate_relative_pupil()
+    # pca.calculate_PCA()
+
 
     # Once we are done reading the files, make final (better) predictions
     # for i in files:

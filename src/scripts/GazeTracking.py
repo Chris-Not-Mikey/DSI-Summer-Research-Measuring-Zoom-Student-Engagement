@@ -41,6 +41,8 @@ class GazeTracker:
         self.saccade_frequency = []
         self.saccade_length = []
         self.gaze_length = []
+        self.average_gaze_angle_degrees = []
+        self.large_amplitude_saccade_list = []
 
 
     def change_to_open_face_dir(self):
@@ -98,6 +100,9 @@ class GazeTracker:
             x_degrees = x_radians * (180.0/math.pi)
             y_degrees = y_radians * (180.0/math.pi)
 
+            avg_degrees = (x_degrees + y_degrees)/2.0
+            self.average_gaze_angle_degrees.append(avg_degrees)
+
             conversion = np.array([(np.float64(time), np.float32(x_degrees),np.float32(y_degrees),np.bool(False), np.uint8(0))]
             , dtype=self.dtype)
 
@@ -118,7 +123,7 @@ class GazeTracker:
 
 
     # Get important data from event detection output like
-    # Saccade Velocity, Saccade Length, Saccade Frequency, and gaze length
+    # Saccade Velocity, Saccade Length, Saccade Frequency, and gaze length p
     def parse_event_data(self, name):
         path = '../../data/gaze_outputs/' + name + "_velocity.csv"
 
@@ -273,6 +278,51 @@ class GazeTracker:
         plt.close()
 
 
+    # Find the saccades that are greater than 10 degrees in amplitude
+    def determine_large_amplitude_saccade(self, name):
+
+        saccade_path = '../../data/event_detection/' + name + ".csv"
+        large_amplitude_saccades = 0
+
+        with open(saccade_path, newline='') as s:
+            s_reader = csv.reader(s)
+
+            counter = 0
+            frame_counter = 0
+            in_a_saccade = False
+            for row in s_reader:
+
+                if counter != 0:
+
+                    # 1 = gaze
+                    # 2 = saccade
+                    # 3 = post saccade oscillation
+                    current_saccade_val = int(row[5])
+
+                    if current_saccade_val == 2:
+                        if self.average_gaze_angle_degrees[counter] >= 10 and in_a_saccade == False:
+                            large_amplitude_saccades = large_amplitude_saccades + 1
+                            in_a_saccade = True
+
+                    if current_saccade_val != 2:
+                        in_a_saccade = False
+
+
+                    if frame_counter == 900:
+                        self.large_amplitude_saccade_list.append(large_amplitude_saccades)
+                        large_amplitude_saccades = 0
+
+                        # reset frame counter
+                        frame_counter = 0
+
+
+                counter = counter + 1
+                frame_counter = frame_counter + 1
+
+
+
+
+
 
     # Final Output for Engagement prediction (saccade velocity)
     def get_saccade_velocity(self):
@@ -289,4 +339,9 @@ class GazeTracker:
     # Final Output for Engagement prediction (gaze length)
     def get_gaze_length(self):
         return self.gaze_length
+
+    # Final output of Number of Large Amplitude Saccades
+    def get_large_amplitude_saccade_rate(self):
+        return self.large_amplitude_saccade_list
+
 
